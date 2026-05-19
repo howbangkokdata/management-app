@@ -2552,7 +2552,7 @@ function buildMemberTable(){
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td>
-        <div style="font-weight:600;font-size:12.5px;">${m.id?`<a href="member_detail.html?id=${m.id}" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border-subtle);">${m.nickname}</a>`:m.nickname}</div>
+        <div style="font-weight:600;font-size:12.5px;">${m.id?`<span onclick="openMemberModal('${m.id}','${(m.nickname||'').replace(/'/g,"\\'")}')" style="cursor:pointer;border-bottom:1px solid var(--border-subtle);">${m.nickname}</span>`:m.nickname}</div>
         ${(m.fullname&&m.fullname!=='nan')?`<div style="font-size:11px;color:var(--muted);margin-top:1px;">${m.fullname}</div>`:''}
       </td>
       <td><span class="pic-tag" title="${m.inferred?'ข้อมูลอนุมาน: Excel ยังแสดง Expired แต่ End date ยังอยู่ในอนาคต รอ confirm':''}" style="background:${m.type==='Renew'?'#EBF5EE':m.type==='Fellow'?'#EEF2FF':m.type==='Distinguish'?'#FFF8EE':m.type==='Barter'?'#F5F0FF':'#F5F5F5'};color:${m.type==='Renew'?'#1C7048':m.type==='Fellow'?'#3B5BDB':m.type==='Distinguish'?'#C49A3C':m.type==='Barter'?'#7C3AED':'#888'};${m.inferred?'border:1px dashed currentColor;opacity:0.75;':''}">${m.type}${m.inferred?'<span style="font-size:9px;vertical-align:super;margin-left:1px;">?</span>':''}</span></td>
@@ -2740,7 +2740,7 @@ function buildRenewalTable(){
     const currentStageName=r.stageIdx<0?'ยังไม่เริ่ม':r.stageIdx>=6?'เสร็จสิ้น':RENEW_STEPS[r.stageIdx];
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td style="font-weight:600;font-size:12.5px;">${r.id?`<a href="member_detail.html?id=${r.id}" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border-subtle);">${r.name}</a>`:r.name}</td>
+      <td style="font-weight:600;font-size:12.5px;">${r.id?`<span onclick="openMemberModal('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')" style="cursor:pointer;border-bottom:1px solid var(--border-subtle);">${r.name}</span>`:r.name}</td>
       <td><span class="pic-tag">${r.owner}</span></td>
       <td>${labelChipHtml(lbl)}</td>
       <td>${r.daysLeft>0?daysChipHtml(r.daysLeft):'<span style="color:var(--muted);font-size:11px;">หมดแล้ว</span>'}</td>
@@ -3635,7 +3635,7 @@ function renderExpiringPaid() {
   tbody.innerHTML = displayed.map(m => {
     const urgStyle = m.daysLeft <= 30 ? 'color:var(--alert);font-weight:700;' : m.daysLeft <= 90 ? 'color:var(--warm);font-weight:600;' : '';
     return `<tr>
-      <td><div style="font-weight:700;">${m.id?`<a href="member_detail.html?id=${m.id}" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border-subtle);">${m.nickname}</a>`:m.nickname}</div><div style="font-size:11px;color:var(--muted);">${(m.fullname&&m.fullname!=='nan')?m.fullname:''}</div></td>
+      <td><div style="font-weight:700;">${m.id?`<span onclick="openMemberModal('${m.id}','${(m.nickname||'').replace(/'/g,"\\'")}')" style="cursor:pointer;border-bottom:1px solid var(--border-subtle);">${m.nickname}</span>`:m.nickname}</div><div style="font-size:11px;color:var(--muted);">${(m.fullname&&m.fullname!=='nan')?m.fullname:''}</div></td>
       <td><span style="font-size:11px;font-weight:600;">${m.type}</span></td>
       <td>${thDate(m.endDate)}</td>
       <td><span style="${urgStyle}">${m.daysLeft} วัน</span></td>
@@ -4437,6 +4437,75 @@ document.addEventListener('DOMContentLoaded', async () => {
   function signOut() {
     auth.signOut();
   }
+</script>
+
+<!-- ══════════════════════════════════════
+     MEMBER DETAIL MODAL
+════════════════════════════════════════ -->
+<div id="member-modal" style="
+  display:none;
+  position:fixed;inset:0;z-index:9000;
+  background:rgba(10,15,28,0.55);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+  align-items:center;justify-content:center;
+" onclick="if(event.target===this)closeMemberModal()">
+  <div style="
+    position:relative;
+    width:min(960px,96vw);
+    height:min(88vh,900px);
+    background:#fff;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 24px 80px rgba(0,0,0,0.28);
+    display:flex;flex-direction:column;
+  ">
+    <!-- header bar -->
+    <div style="
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 18px 12px 20px;
+      border-bottom:1px solid #E8E4DC;
+      background:#F7F5F0;
+      flex-shrink:0;
+    ">
+      <span id="member-modal-title" style="font-size:13px;font-weight:700;color:#4A4740;">Member Detail</span>
+      <button onclick="closeMemberModal()" style="
+        background:none;border:none;cursor:pointer;
+        width:30px;height:30px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        color:#7A7870;font-size:18px;line-height:1;
+        transition:background .15s;
+      " onmouseover="this.style.background='#E8E4DC'" onmouseout="this.style.background='none'">&times;</button>
+    </div>
+    <!-- iframe -->
+    <iframe id="member-modal-frame"
+      src=""
+      style="flex:1;border:none;width:100%;"
+      allow="same-origin">
+    </iframe>
+  </div>
+</div>
+
+<script>
+function openMemberModal(memberId, memberName) {
+  const modal = document.getElementById('member-modal');
+  const frame = document.getElementById('member-modal-frame');
+  const title = document.getElementById('member-modal-title');
+  frame.src = 'member_detail.html?id=' + memberId + '&modal=1';
+  if (memberName) title.textContent = memberName;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeMemberModal() {
+  const modal = document.getElementById('member-modal');
+  const frame = document.getElementById('member-modal-frame');
+  modal.style.display = 'none';
+  frame.src = '';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeMemberModal();
+});
 </script>
 </body>
 </html>

@@ -306,14 +306,14 @@
 
 <!-- App -->
 <div id="app-wrapper">
-  <header class="header">
+  <header class="header" id="main-header">
     <div class="header-left">
-      <a class="back-btn" href="/members">← Members</a>
+      <a class="back-btn" id="back-btn" href="/members">← Members</a>
       <span class="header-brand">HOW BANGKOK</span>
     </div>
     <div class="header-right">
       <span id="user-email"></span>
-      <button class="btn-signout" onclick="signOut()">ออกจากระบบ</button>
+      <button class="btn-signout" id="signout-btn" onclick="signOut()">ออกจากระบบ</button>
     </div>
   </header>
 
@@ -594,6 +594,13 @@ auth.onAuthStateChanged(user => {
   const errorEl     = document.getElementById('login-error');
   const params      = new URLSearchParams(location.search);
   const isPreview   = params.get('preview') === '1';
+  const isModal     = params.get('modal') === '1';
+
+  if (isModal) {
+    const hdr = document.getElementById('main-header');
+    if (hdr) hdr.style.display = 'none';
+    document.body.style.background = 'transparent';
+  }
 
   if (isPreview) {
     document.getElementById('user-email').textContent = 'visual preview';
