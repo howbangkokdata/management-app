@@ -1,0 +1,1939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOW Admin — Import Data</title>
+  <script src="supabase_key.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- SheetJS for Excel/CSV parsing -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS — HOW Admin Dark Theme
+    ═══════════════════════════════════════════ */
+    :root {
+      --bg:       #1a1a1a;
+      --surface:  #242424;
+      --surface2: #2e2e2e;
+      --border:   #3a3a3a;
+      --text:     #e8e8e8;
+      --text2:    #a0a0a0;
+      --accent:   #c9a84c;
+      --accent-dim:#a07830;
+      --success:  #1C7048;
+      --success-light: #0d3320;
+      --danger:   #c0392b;
+      --danger-light: #3a1010;
+      --info:     #2254a0;
+      --info-light:#0d1e3a;
+      --font:     'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius:   10px;
+      --radius-sm:6px;
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100%;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ═══════════════════════════════════════════
+       PIN SCREEN OVERLAY
+    ═══════════════════════════════════════════ */
+    #pin-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 32px;
+    }
+    #pin-screen.hidden { display: none; }
+
+    .pin-logo {
+      text-align: center;
+    }
+    .pin-logo .brand {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .pin-logo .brand-sub {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    .pin-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 40px;
+      width: 320px;
+      text-align: center;
+    }
+    .pin-card h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .pin-card p {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 24px;
+    }
+
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .pin-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: transparent;
+      transition: all 0.15s;
+    }
+    .pin-dot.filled {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .pin-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .pin-key {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 18px;
+      font-weight: 600;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.12s;
+      user-select: none;
+    }
+    .pin-key:hover { background: #383838; border-color: #505050; }
+    .pin-key:active { transform: scale(0.95); }
+    .pin-key.clear { font-size: 13px; font-weight: 600; color: var(--text2); }
+    .pin-key.zero { grid-column: 2; }
+
+    .pin-error {
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 14px;
+      min-height: 18px;
+      letter-spacing: 0.3px;
+    }
+    .pin-card.shake {
+      animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)}
+      20%{transform:translateX(-8px)}
+      40%{transform:translateX(8px)}
+      60%{transform:translateX(-6px)}
+      80%{transform:translateX(6px)}
+    }
+
+    /* ═══════════════════════════════════════════
+       MAIN LAYOUT
+    ═══════════════════════════════════════════ */
+    #app { display: none; min-height: 100vh; }
+    #app.visible { display: block; }
+
+    /* HEADER */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      height: 56px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text2);
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+    }
+    .back-btn:hover { color: var(--text); border-color: #555; background: var(--surface2); }
+    .back-btn svg { width: 14px; height: 14px; }
+
+    .brand {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 2.5px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .brand-sep { width: 1px; height: 14px; background: var(--border); }
+    .brand-sub { font-size: 12px; color: var(--text2); }
+
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    /* Supabase status pill */
+    .db-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text2);
+      transition: all 0.3s;
+    }
+    .db-status.connected {
+      color: #4ade80;
+      border-color: #1a5c38;
+      background: var(--success-light);
+    }
+    .db-status.error {
+      color: #f87171;
+      border-color: #5c1a1a;
+      background: var(--danger-light);
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .status-dot.pulse {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%,100%{opacity:1}
+      50%{opacity:0.3}
+    }
+
+    /* CONTENT */
+    .content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .page-sub {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 28px;
+    }
+    .page-sub span { color: var(--accent); font-weight: 600; }
+
+    /* SECTION CARD */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon {
+      width: 28px; height: 28px;
+      background: var(--surface2);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .card-body { padding: 20px; }
+
+    /* ═══════════════════════════════════════════
+       DROP ZONE
+    ═══════════════════════════════════════════ */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: #1e1a0e;
+    }
+    #drop-zone.has-file {
+      border-style: solid;
+      border-color: var(--success);
+      background: var(--success-light);
+    }
+    #file-input { display: none; }
+
+    .drop-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .drop-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .drop-sub {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 16px;
+    }
+    .btn-browse {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-browse:hover { background: #383838; border-color: #555; }
+
+    /* Spinner overlay on drop zone */
+    .drop-spinner {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(36,36,36,0.85);
+      border-radius: var(--radius);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .drop-spinner.visible { display: flex; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-text {
+      font-size: 12px;
+      color: var(--text2);
+      font-weight: 500;
+    }
+
+    /* ═══════════════════════════════════════════
+       FILE TYPE SELECT (when not auto-detected)
+    ═══════════════════════════════════════════ */
+    #type-select-row {
+      display: none;
+      margin-top: 16px;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    #type-select-row.visible { display: flex; flex-wrap: wrap; }
+    .type-select-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+    #file-type-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      cursor: pointer;
+      outline: none;
+    }
+    #file-type-select:focus { border-color: var(--accent); }
+
+    /* ═══════════════════════════════════════════
+       PREVIEW PANEL
+    ═══════════════════════════════════════════ */
+    #preview-panel { display: none; }
+    #preview-panel.visible { display: block; }
+
+    .file-meta {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .file-meta-info { display: flex; flex-direction: column; gap: 6px; }
+    .file-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .file-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+    }
+    .badge-accent { background: #2a2000; color: var(--accent); border: 1px solid #5a4010; }
+    .badge-success { background: var(--success-light); color: #4ade80; border: 1px solid #1a5c38; }
+    .badge-info { background: var(--info-light); color: #60a5fa; border: 1px solid #1a3a6c; }
+    .badge-warning { background: #2a1a00; color: #fb923c; border: 1px solid #6c3a10; }
+
+    .file-meta-details {
+      font-size: 11px;
+      color: var(--text2);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .file-meta-details span { display: flex; align-items: center; gap: 4px; }
+
+    .btn-clear {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-clear:hover { background: var(--danger-light); color: #f87171; border-color: var(--danger); }
+
+    /* Preview table */
+    .preview-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+    }
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .preview-table th {
+      background: var(--surface2);
+      color: var(--text2);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 12px;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    .preview-table td {
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .preview-table tr:last-child td { border-bottom: none; }
+    .preview-table tr:hover td { background: var(--surface2); }
+    .preview-table td.null-val { color: var(--border); font-style: italic; }
+
+    .cols-summary {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 16px;
+    }
+    .cols-summary strong { color: var(--accent); }
+
+    /* ═══════════════════════════════════════════
+       IMPORT BUTTON + PROGRESS
+    ═══════════════════════════════════════════ */
+    .import-action-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn-import {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #12120e;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 10px 24px;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .btn-import:hover:not(:disabled) { background: #e0bc60; }
+    .btn-import:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #progress-section { display: none; flex: 1; min-width: 220px; }
+    #progress-section.visible { display: block; }
+    .progress-label {
+      font-size: 11px;
+      color: var(--text2);
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .progress-bar-track {
+      background: var(--surface2);
+      border-radius: 100px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 100px;
+      transition: width 0.2s ease;
+      width: 0%;
+    }
+
+    /* ═══════════════════════════════════════════
+       TOAST NOTIFICATION
+    ═══════════════════════════════════════════ */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      max-width: 380px;
+      border: 1px solid transparent;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast.success { background: var(--success-light); color: #4ade80; border-color: #1a5c38; }
+    .toast.error { background: var(--danger-light); color: #f87171; border-color: #7c2020; }
+    .toast.info { background: var(--info-light); color: #60a5fa; border-color: #1a3a6c; }
+
+    /* ═══════════════════════════════════════════
+       CONFLICT MODAL
+    ═══════════════════════════════════════════ */
+    #modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #modal-backdrop.visible { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 480px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn {
+      from { transform: translateY(-16px) scale(0.97); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .modal-sub { font-size: 12px; color: var(--text2); }
+    .modal-sub strong { color: var(--accent); }
+
+    .modal-body { padding: 20px 24px; }
+
+    .conflict-stats {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .cstat {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+    }
+    .cstat-num {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .cstat-label { font-size: 11px; color: var(--text2); font-weight: 500; }
+
+    .modal-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+
+    .option-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+      font-family: var(--font);
+    }
+    .option-btn:hover { border-color: var(--accent); background: #1e1a0e; }
+    .option-btn.selected { border-color: var(--accent); background: #1e1a0e; }
+    .option-btn.danger:hover, .option-btn.danger.selected { border-color: var(--danger); background: var(--danger-light); }
+
+    .option-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .option-text {}
+    .option-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .option-desc { font-size: 11px; color: var(--text2); line-height: 1.4; }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .remember-row input[type=checkbox] {
+      width: 15px; height: 15px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .remember-row label {
+      font-size: 12px;
+      color: var(--text2);
+      cursor: pointer;
+    }
+
+    .modal-footer {
+      padding: 14px 24px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-cancel:hover { background: var(--surface2); color: var(--text); }
+
+    .btn-confirm {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #12120e;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 8px 22px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-confirm:hover { background: #e0bc60; }
+
+    /* ═══════════════════════════════════════════
+       IMPORT LOG
+    ═══════════════════════════════════════════ */
+    .log-empty {
+      text-align: center;
+      padding: 32px;
+      color: var(--text2);
+      font-size: 12px;
+    }
+    .log-empty .log-empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+    .log-list { display: flex; flex-direction: column; gap: 0; }
+    .log-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-item-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .log-status-icon { font-size: 18px; flex-shrink: 0; }
+    .log-info { min-width: 0; }
+    .log-filename {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+    .log-meta { font-size: 11px; color: var(--text2); margin-top: 1px; }
+    .log-item-right { text-align: right; flex-shrink: 0; }
+    .log-rows {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .log-rows.error { color: var(--danger); }
+    .log-time { font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+    .btn-clear-log {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-family: var(--font);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-clear-log:hover { color: var(--danger); border-color: var(--danger); }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════ */
+    @media (max-width: 600px) {
+      .content { padding: 16px 16px 48px; }
+      .header { padding: 0 16px; }
+      .brand-sub { display: none; }
+      .brand-sep { display: none; }
+      #drop-zone { padding: 32px 16px; }
+      .conflict-stats { flex-direction: column; }
+      .file-meta { flex-direction: column; }
+      .import-action-row { flex-direction: column; align-items: stretch; }
+      .btn-import { justify-content: center; }
+      #toast-container { left: 16px; right: 16px; bottom: 16px; }
+    }
+
+    /* Divider between sections */
+    .section-divider { height: 1px; background: var(--border); margin: 4px 0 24px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     PIN SCREEN
+═══════════════════════════════════════════ -->
+<div id="pin-screen">
+  <div class="pin-logo">
+    <div class="brand">HOW BANGKOK</div>
+    <div class="brand-sub">Admin Portal</div>
+  </div>
+
+  <div class="pin-card" id="pin-card">
+    <h2>Enter PIN</h2>
+    <p>Enter your 4-digit admin PIN to continue</p>
+
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="dot-0"></div>
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+    </div>
+
+    <div class="pin-keypad">
+      <button class="pin-key" data-n="1">1</button>
+      <button class="pin-key" data-n="2">2</button>
+      <button class="pin-key" data-n="3">3</button>
+      <button class="pin-key" data-n="4">4</button>
+      <button class="pin-key" data-n="5">5</button>
+      <button class="pin-key" data-n="6">6</button>
+      <button class="pin-key" data-n="7">7</button>
+      <button class="pin-key" data-n="8">8</button>
+      <button class="pin-key" data-n="9">9</button>
+      <button class="pin-key clear" id="pin-clear">⌫</button>
+      <button class="pin-key zero" data-n="0">0</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="back-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10 3L5 8l5 5"/>
+        </svg>
+        Dashboard
+      </a>
+      <div class="brand-sep"></div>
+      <div class="brand">HOW</div>
+      <div class="brand-sep"></div>
+      <div class="brand-sub">Import Data</div>
+    </div>
+    <div class="header-right">
+      <div class="db-status" id="db-status">
+        <div class="status-dot pulse"></div>
+        <span id="db-status-text">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+    <div class="page-title">Data Import</div>
+    <div class="page-sub">Upload Excel or CSV files to sync data into <span>Supabase</span></div>
+
+    <!-- ─── UPLOAD SECTION ─── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon">📂</div>
+          File Upload
+        </div>
+      </div>
+      <div class="card-body">
+
+        <!-- Drop Zone -->
+        <div id="drop-zone" role="button" tabindex="0" aria-label="Drop file or click to browse">
+          <span class="drop-icon">📊</span>
+          <div class="drop-title">Drop your file here</div>
+          <div class="drop-sub">Supports .xlsx, .xls, .csv — Member Status, Leads, Expiring Member</div>
+          <button class="btn-browse" id="btn-browse">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 10v4h12v-4M8 2v8M5 5l3-3 3 3"/>
+            </svg>
+            Browse Files
+          </button>
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+
+          <div class="drop-spinner" id="drop-spinner">
+            <div class="spinner"></div>
+            <div class="spinner-text">Parsing file…</div>
+          </div>
+        </div>
+
+        <!-- Manual type selection (shown when not auto-detected) -->
+        <div id="type-select-row">
+          <span class="type-select-label">📋 Select file type:</span>
+          <select id="file-type-select">
+            <option value="">— Choose —</option>
+            <option value="members">Members</option>
+            <option value="leads">Leads</option>
+            <option value="renewal">Renewal Tracking</option>
+            <option value="contracts">Contracts</option>
+          </select>
+        </div>
+
+        <!-- Preview Panel -->
+        <div id="preview-panel">
+          <div class="section-divider" style="margin-top:20px;"></div>
+
+          <div class="file-meta">
+            <div class="file-meta-info">
+              <div class="file-name-row">
+                <div class="file-name" id="preview-filename">filename.xlsx</div>
+                <span class="badge badge-accent" id="preview-type-badge">members</span>
+              </div>
+              <div class="file-meta-details">
+                <span>📋 Sheet: <strong id="preview-sheet">—</strong></span>
+                <span>🗂️ Rows: <strong id="preview-rows">—</strong></span>
+                <span>📐 Cols: <strong id="preview-cols">—</strong></span>
+              </div>
+            </div>
+            <button class="btn-clear" id="btn-clear-file">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 2l12 12M14 2L2 14"/>
+              </svg>
+              Clear file
+            </button>
+          </div>
+
+          <div class="cols-summary" id="cols-summary"></div>
+
+          <div class="preview-table-wrap" id="preview-table-wrap"></div>
+
+          <div class="import-action-row">
+            <button class="btn-import" id="btn-import">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M8 2v10M4 8l4 4 4-4"/>
+                <rect x="2" y="13" width="12" height="1.5" rx="0.5" fill="currentColor" stroke="none"/>
+              </svg>
+              Import to Supabase
+            </button>
+            <div id="progress-section">
+              <div class="progress-label" id="progress-label">Preparing…</div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /preview-panel -->
+
+      </div><!-- /card-body -->
+    </div><!-- /card -->
+
+    <!-- ─── IMPORT LOG ─── -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon">🕒</div>
+          Import Log
+        </div>
+        <button class="btn-clear-log" id="btn-clear-log">Clear log</button>
+      </div>
+      <div id="log-body">
+        <div class="log-empty" id="log-empty">
+          <div class="log-empty-icon">📋</div>
+          No imports yet in this session
+        </div>
+        <div class="log-list" id="log-list"></div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /app -->
+
+<!-- ═══════════════════════════════════════════
+     CONFLICT MODAL
+═══════════════════════════════════════════ -->
+<div id="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Confirm Import</div>
+      <div class="modal-sub" id="modal-sub">
+        Importing into <strong id="modal-table-name">—</strong>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="conflict-stats">
+        <div class="cstat">
+          <div class="cstat-num" id="modal-incoming">—</div>
+          <div class="cstat-label">Rows to import</div>
+        </div>
+        <div class="cstat">
+          <div class="cstat-num" id="modal-existing">—</div>
+          <div class="cstat-label">Existing rows</div>
+        </div>
+      </div>
+
+      <div class="modal-options" id="modal-options">
+        <button class="option-btn" data-choice="replace" id="opt-replace">
+          <span class="option-icon">🔄</span>
+          <div class="option-text">
+            <div class="option-title">Replace All</div>
+            <div class="option-desc">Delete all existing rows, then insert new ones. Full sync — use when the file is the source of truth.</div>
+          </div>
+        </button>
+        <button class="option-btn" data-choice="add" id="opt-add">
+          <span class="option-icon">➕</span>
+          <div class="option-text">
+            <div class="option-title">Add New Only</div>
+            <div class="option-desc">Skip rows that already exist (matched by nickname + name for members, nickname + email for leads). Safe for incremental updates.</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="remember-row">
+        <input type="checkbox" id="chk-remember" name="remember">
+        <label for="chk-remember">Remember my choice for this session</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" id="modal-cancel">❌ Cancel</button>
+      <button class="btn-confirm" id="modal-confirm" disabled>Proceed →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TOAST CONTAINER
+═══════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ─────────────────────────────────────────────
+   SUPABASE CONFIG (direct REST, no SDK needed)
+──────────────────────────────────────────────── */
+const SUPABASE_URL = 'https://argdnwhxwykdwrwkojyb.supabase.co';
+const SUPABASE_KEY = window.HowSupabaseKey ? window.HowSupabaseKey.get() : '';
+
+const HEADERS = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=minimal'
+};
+
+/* ─────────────────────────────────────────────
+   PIN AUTH
+──────────────────────────────────────────────── */
+const CORRECT_PIN = '2468';
+let pinBuffer = '';
+
+function initPinScreen() {
+  // Already authenticated this session?
+  if (sessionStorage.getItem('how_admin_auth') === '1') {
+    showApp();
+    return;
+  }
+
+  document.querySelectorAll('.pin-key[data-n]').forEach(btn => {
+    btn.addEventListener('click', () => enterPinDigit(btn.dataset.n));
+  });
+  document.getElementById('pin-clear').addEventListener('click', clearPinDigit);
+
+  // Also support keyboard
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('pin-screen').classList.contains('hidden')) return;
+    if (e.key >= '0' && e.key <= '9') enterPinDigit(e.key);
+    if (e.key === 'Backspace' || e.key === 'Delete') clearPinDigit();
+  });
+}
+
+function enterPinDigit(n) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += n;
+  updatePinDots();
+  if (pinBuffer.length === 4) checkPin();
+}
+
+function clearPinDigit() {
+  if (pinBuffer.length === 0) return;
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`dot-${i}`).classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+
+function checkPin() {
+  if (pinBuffer === CORRECT_PIN) {
+    sessionStorage.setItem('how_admin_auth', '1');
+    showApp();
+  } else {
+    const card = document.getElementById('pin-card');
+    card.classList.add('shake');
+    card.addEventListener('animationend', () => card.classList.remove('shake'), { once: true });
+    document.getElementById('pin-error').textContent = 'Incorrect PIN. Try again.';
+    pinBuffer = '';
+    updatePinDots();
+  }
+}
+
+function showApp() {
+  document.getElementById('pin-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  checkSupabaseConnection();
+}
+
+/* ─────────────────────────────────────────────
+   SUPABASE HELPERS
+──────────────────────────────────────────────── */
+async function checkSupabaseConnection() {
+  const el = document.getElementById('db-status');
+  const txt = document.getElementById('db-status-text');
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/members?select=id&limit=1`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    if (r.ok || r.status === 406) {
+      el.className = 'db-status connected';
+      txt.textContent = 'Supabase Connected';
+      document.querySelector('#db-status .status-dot').classList.remove('pulse');
+    } else throw new Error(`${r.status}`);
+  } catch(e) {
+    el.className = 'db-status error';
+    txt.textContent = 'Connection Error';
+    document.querySelector('#db-status .status-dot').classList.remove('pulse');
+  }
+}
+
+async function getCount(table) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=id`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'count=exact',
+      'Range': '0-0'
+    }
+  });
+  const cr = r.headers.get('content-range') || '';
+  // format: "0-0/123" or "*/123"
+  const m = cr.match(/\/(\d+)$/);
+  return m ? parseInt(m[1]) : 0;
+}
+
+async function deleteAll(table) {
+  // Delete all rows with id != impossible uuid
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/${table}?id=neq.00000000-0000-0000-0000-000000000000`,
+    {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    }
+  );
+  if (!r.ok && r.status !== 404 && r.status !== 406) {
+    const txt = await r.text();
+    throw new Error(`DELETE failed (${r.status}): ${txt}`);
+  }
+}
+
+async function batchInsert(table, rows, onProgress) {
+  const BATCH = 50;
+  const total = Math.ceil(rows.length / BATCH);
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH);
+    const batchNum = Math.floor(i / BATCH) + 1;
+    if (onProgress) onProgress(batchNum, total, i);
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+      body: JSON.stringify(chunk)
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`Insert batch ${batchNum} failed (${r.status}): ${txt.slice(0, 200)}`);
+    }
+    inserted += chunk.length;
+  }
+  return inserted;
+}
+
+/* ─────────────────────────────────────────────
+   DATA HELPERS
+──────────────────────────────────────────────── */
+function cleanStr(val) {
+  if (val === null || val === undefined) return null;
+  const s = String(val).trim();
+  if (!s || s.toLowerCase() === 'null' || s.toLowerCase() === 'nan' || s === 'NaT' || s === 'undefined') return null;
+  return s;
+}
+
+function cleanDate(val) {
+  if (val === null || val === undefined) return null;
+  const s = String(val).trim();
+  if (!s || s === 'NaT' || s === 'null' || s === 'undefined' || s === 'nan' || s === 'Invalid date') return null;
+  // Already ISO format YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  // Excel serial date (number)
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    const n = parseFloat(s);
+    if (n > 1000 && n < 200000) {
+      // Excel epoch: Dec 30, 1899
+      const d = new Date((n - 25569) * 86400 * 1000);
+      if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    }
+  }
+  // Try native parse for strings like "15/05/2025" DD/MM/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    const [day, month, year] = s.split('/');
+    const d = new Date(`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  }
+  // Generic parse
+  const d = new Date(s);
+  if (!isNaN(d.getTime()) && d.getFullYear() > 1900) return d.toISOString().slice(0, 10);
+  return null;
+}
+
+function cleanNum(val) {
+  if (val === null || val === undefined) return null;
+  const s = String(val).replace(/,/g, '').trim();
+  if (!s || s.toLowerCase() === 'nan' || s.toLowerCase() === 'null') return null;
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function cleanPhone(val) {
+  // Handle scientific notation like 6.62E+10
+  if (val === null || val === undefined) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+  // Scientific notation
+  if (/^[\d.]+[eE][+\-]?\d+$/.test(s)) {
+    const n = parseFloat(s);
+    if (!isNaN(n)) return String(Math.round(n));
+  }
+  // Strip non-numeric except leading +
+  return s.replace(/[^\d+\-]/g, '') || null;
+}
+
+function normKey(s) {
+  return String(s || '').toLowerCase().trim();
+}
+
+/* ─────────────────────────────────────────────
+   COLUMN MATCHING
+   Find a column in headers by substring match
+──────────────────────────────────────────────── */
+function findCol(headers, ...patterns) {
+  const norm = headers.map(h => normKey(h));
+  for (const pat of patterns) {
+    const pn = normKey(pat);
+    const idx = norm.findIndex(h => h.includes(pn) || pn.includes(h));
+    if (idx !== -1) return headers[idx];
+  }
+  return null;
+}
+
+/* ─────────────────────────────────────────────
+   FILE TYPE AUTO-DETECTION
+──────────────────────────────────────────────── */
+function detectFileType(filename) {
+  const f = filename.toLowerCase();
+  if (f.includes('member_status') || f.includes('member status') || f.includes('paid_status') || f.includes('paid status')) return 'members';
+  if (f.includes('leads') || f.includes('interest')) return 'leads';
+  if (f.includes('expiring')) return 'renewal';
+  return null; // unknown — show manual selector
+}
+
+/* ─────────────────────────────────────────────
+   ROW MAPPERS
+──────────────────────────────────────────────── */
+function mapMemberRow(raw, headers) {
+  const g = (k) => {
+    const col = findCol(headers, k);
+    return col ? raw[col] : undefined;
+  };
+
+  const statusRaw = cleanStr(g('active_status') ?? g('Active Status') ?? g('status'));
+  let membership_status = statusRaw;
+  if (statusRaw) {
+    const sl = statusRaw.toLowerCase();
+    if (sl === 'active') membership_status = 'active';
+    else if (sl === 'expired' || sl === 'expire') membership_status = 'expired';
+    else if (sl === 'frozen' || sl === 'freeze') membership_status = 'frozen';
+  }
+
+  return {
+    nickname:          cleanStr(g('ชื่อเล่น') ?? g('nickname') ?? g('Nickname')),
+    fullname:          cleanStr(g('ชื่อ จริง') ?? g('fullname') ?? g('Full Name') ?? g('ชื่อจริง')),
+    app_name:          cleanStr(g('App Name')),
+    app_email:         cleanStr(g('App Email') ?? g('Email') ?? g('app_email')),
+    membership_type:   cleanStr(g('Type') ?? g('type') ?? g('membership_type') ?? g('Membership Type')),
+    membership_status: membership_status,
+    paid_status:       cleanStr(g('paid_status') ?? g('Paid Status')),
+    price_master:      cleanNum(g('price_master') ?? g('Renew Price') ?? g('Price')),
+    price_2026:        cleanNum(g('price_2026') ?? g('Payment 2026') ?? g('Payment')),
+    start_date:        cleanDate(g('Start') ?? g('start_date') ?? g('Start Date')),
+    end_date:          cleanDate(g('End') ?? g('end_date') ?? g('End Date') ?? g('Expire') ?? g('expiry')),
+    payment_date:      cleanDate(g('Payment Date') ?? g('payment_date')),
+    inv_name:          cleanStr(g('Inv Name') ?? g('inv_name') ?? g('Invoice Name')),
+    remark:            cleanStr(g('Remark') ?? g('remark') ?? g('Note') ?? g('Notes')),
+  };
+}
+
+function mapLeadRow(raw, headers) {
+  const g = (k) => {
+    const col = findCol(headers, k);
+    return col ? raw[col] : undefined;
+  };
+
+  const visitedRaw = cleanStr(g('Visited') ?? g('visited') ?? g('Visited?'));
+  let visited = null;
+  if (visitedRaw) {
+    const vl = visitedRaw.toLowerCase();
+    if (vl === 'yes' || vl === 'true' || vl === '1') visited = true;
+    else if (vl === "haven't" || vl === 'no' || vl === 'false' || vl === '0') visited = false;
+  }
+
+  return {
+    nickname:           cleanStr(g('Nickname') ?? g('nickname') ?? g('ชื่อเล่น')),
+    fullname:           cleanStr(g('Name') ?? g('fullname') ?? g('Full Name') ?? g('ชื่อจริง')),
+    phone:              cleanPhone(g('Phone Number') ?? g('Phone') ?? g('phone')),
+    line_id:            cleanStr(g('LINE') ?? g('Line') ?? g('line_id')),
+    email:              cleanStr(g('Email') ?? g('email')),
+    company:            cleanStr(g('Company') ?? g('company') ?? g('บริษัท')),
+    position:           cleanStr(g('Position') ?? g('position')),
+    lead_source:        cleanStr(g('Where from') ?? g('Where From') ?? g('Source') ?? g('lead_source')),
+    poc:                cleanStr(g('POC') ?? g('poc')),
+    status:             cleanStr(g('Status') ?? g('status')),
+    visited:            visited,
+    first_contact_date: cleanDate(g('Submitted at') ?? g('Submitted At') ?? g('first_contact_date')),
+    last_contact_date:  cleanDate(g('Recent Contact') ?? g('last_contact_date') ?? g('Last Contact')),
+    remark:             cleanStr(g('Note') ?? g('Notes') ?? g('remark') ?? g('Remark')),
+  };
+}
+
+function mapRenewalRow(raw, headers, period) {
+  const g = (k) => {
+    const col = findCol(headers, k);
+    return col ? raw[col] : undefined;
+  };
+
+  return {
+    nickname:          cleanStr(g('Nickname') ?? g('ชื่อเล่น') ?? g('nickname')),
+    fullname:          cleanStr(g('Full Name') ?? g('Name') ?? g('fullname') ?? g('ชื่อจริง')),
+    membership_type:   cleanStr(g('Type') ?? g('Membership') ?? g('membership_type')),
+    end_date:          cleanDate(g('End') ?? g('end_date') ?? g('End Date') ?? g('Expire')),
+    price_master:      cleanNum(g('Price') ?? g('Renew Price') ?? g('price_master')),
+    status:            cleanStr(g('Status') ?? g('status')),
+    poc:               cleanStr(g('POC') ?? g('poc')),
+    remark:            cleanStr(g('Remark') ?? g('remark') ?? g('Note')),
+    tracking_period:   period,
+  };
+}
+
+/* ─────────────────────────────────────────────
+   FILE PARSING
+──────────────────────────────────────────────── */
+let parsedState = null; // { rows, headers, type, table, filename, sheetName }
+
+function parseFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array', cellDates: false, raw: false });
+        resolve({ wb, filename: file.name });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function getSheetData(wb, sheetName) {
+  const ws = wb.Sheets[sheetName];
+  if (!ws) return null;
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: null, raw: true });
+  return raw;
+}
+
+function processWorkbook(wb, filename, fileType) {
+  const sheetNames = wb.SheetNames;
+
+  if (fileType === 'members') {
+    // Try "new by tata" sheet for xlsx; fallback to first sheet
+    let sheetName = sheetNames.find(s => s.toLowerCase().includes('new by tata'))
+                  || sheetNames[0];
+    const rows = getSheetData(wb, sheetName) || [];
+    const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+    const mapped = rows
+      .map(r => mapMemberRow(r, headers))
+      .filter(r => r.nickname || r.fullname || r.app_email);
+    return [{ rows: mapped, rawHeaders: headers, sheetName, type: 'members', table: 'members', rawRows: rows }];
+
+  } else if (fileType === 'leads') {
+    // Try "HOW Interest Form" named sheet; fallback to first
+    let sheetName = sheetNames.find(s => s.toLowerCase().includes('interest'))
+                  || sheetNames[0];
+    const rows = getSheetData(wb, sheetName) || [];
+    const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+    const mapped = rows
+      .map(r => mapLeadRow(r, headers))
+      .filter(r => r.nickname || r.fullname || r.email);
+    return [{ rows: mapped, rawHeaders: headers, sheetName, type: 'leads', table: 'leads', rawRows: rows }];
+
+  } else if (fileType === 'renewal') {
+    // Each sheet is a tracking period
+    const results = [];
+    const RENEWAL_SHEETS = sheetNames.filter(s => {
+      const sl = s.toLowerCase();
+      return sl.includes('q1') || sl.includes('q2') || sl.includes('q3') || sl.includes('q4')
+          || sl.includes('january') || sl.includes('february') || sl.includes('march')
+          || sl.includes('april') || sl.includes('may') || sl.includes('june')
+          || sl.includes('july') || sl.includes('august') || sl.includes('september')
+          || sl.includes('october') || sl.includes('november') || sl.includes('december')
+          || sl.includes('hot') || sl.includes('2025') || sl.includes('2026');
+    });
+    const sheets = RENEWAL_SHEETS.length > 0 ? RENEWAL_SHEETS : sheetNames;
+    for (const sheetName of sheets) {
+      const rows = getSheetData(wb, sheetName) || [];
+      if (rows.length === 0) continue;
+      const headers = Object.keys(rows[0]);
+      const period = sheetName.trim();
+      const mapped = rows
+        .map(r => mapRenewalRow(r, headers, period))
+        .filter(r => r.nickname || r.fullname);
+      if (mapped.length > 0) {
+        results.push({ rows: mapped, rawHeaders: headers, sheetName, type: 'renewal', table: 'renewal_tracking', rawRows: rows });
+      }
+    }
+    return results.length > 0 ? results : [{ rows: [], rawHeaders: [], sheetName: sheetNames[0], type: 'renewal', table: 'renewal_tracking', rawRows: [] }];
+
+  } else if (fileType === 'contracts') {
+    let sheetName = sheetNames.find(s => s.includes('2026') || s.toLowerCase().includes('contract'))
+                  || sheetNames[0];
+    const rows = getSheetData(wb, sheetName) || [];
+    const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+    // Contracts: pass through as-is with basic cleanup
+    const mapped = rows
+      .map(r => {
+        const out = {};
+        headers.forEach(h => { out[h] = cleanStr(r[h]); });
+        return out;
+      })
+      .filter(r => Object.values(r).some(v => v !== null));
+    return [{ rows: mapped, rawHeaders: headers, sheetName, type: 'contracts', table: 'contracts', rawRows: rows }];
+  }
+
+  return [];
+}
+
+/* ─────────────────────────────────────────────
+   UI: FILE HANDLING
+──────────────────────────────────────────────── */
+const dropZone      = document.getElementById('drop-zone');
+const fileInput     = document.getElementById('file-input');
+const btnBrowse     = document.getElementById('btn-browse');
+const dropSpinner   = document.getElementById('drop-spinner');
+const typeSelectRow = document.getElementById('type-select-row');
+const fileTypeSelect= document.getElementById('file-type-select');
+const previewPanel  = document.getElementById('preview-panel');
+const btnClearFile  = document.getElementById('btn-clear-file');
+const btnImport     = document.getElementById('btn-import');
+
+// Drag events
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) handleFile(files[0]);
+});
+
+dropZone.addEventListener('click', (e) => {
+  if (e.target === btnBrowse || btnBrowse.contains(e.target)) return;
+  fileInput.click();
+});
+btnBrowse.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
+  fileInput.value = '';
+});
+
+fileTypeSelect.addEventListener('change', () => {
+  if (currentWorkbook && fileTypeSelect.value) {
+    const results = processWorkbook(currentWorkbook, currentFilename, fileTypeSelect.value);
+    if (results.length > 0) {
+      parsedState = results[0]; // use first result for preview
+      parsedState.filename = currentFilename;
+      renderPreview(parsedState);
+    }
+  }
+});
+
+btnClearFile.addEventListener('click', clearFile);
+
+let currentWorkbook = null;
+let currentFilename = '';
+
+async function handleFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+    showToast('error', `Unsupported file type: .${ext}. Use .xlsx, .xls, or .csv`);
+    return;
+  }
+
+  // Show spinner
+  dropSpinner.classList.add('visible');
+  typeSelectRow.classList.remove('visible');
+  previewPanel.classList.remove('visible');
+  parsedState = null;
+  currentWorkbook = null;
+
+  try {
+    const { wb } = await parseFile(file);
+    currentWorkbook = wb;
+    currentFilename = file.name;
+
+    const autoType = detectFileType(file.name);
+
+    if (autoType) {
+      const results = processWorkbook(wb, file.name, autoType);
+      if (results.length > 0) {
+        parsedState = results[0];
+        parsedState.filename = file.name;
+        renderPreview(parsedState);
+        dropZone.classList.add('has-file');
+      }
+    } else {
+      // Need manual selection
+      typeSelectRow.classList.add('visible');
+      fileTypeSelect.value = '';
+      dropZone.classList.add('has-file');
+    }
+  } catch (err) {
+    showToast('error', `Failed to parse file: ${err.message}`);
+    console.error(err);
+  } finally {
+    dropSpinner.classList.remove('visible');
+  }
+}
+
+function clearFile() {
+  parsedState = null;
+  currentWorkbook = null;
+  currentFilename = '';
+  dropZone.classList.remove('has-file');
+  typeSelectRow.classList.remove('visible');
+  previewPanel.classList.remove('visible');
+  fileTypeSelect.value = '';
+  fileInput.value = '';
+}
+
+const TYPE_LABELS = {
+  members: 'Members',
+  leads: 'Leads',
+  renewal: 'Renewal Tracking',
+  contracts: 'Contracts'
+};
+
+function renderPreview(state) {
+  previewPanel.classList.add('visible');
+
+  document.getElementById('preview-filename').textContent = state.filename;
+  const badge = document.getElementById('preview-type-badge');
+  badge.textContent = TYPE_LABELS[state.type] || state.type;
+  badge.className = 'badge ' + (state.type === 'members' ? 'badge-accent' : state.type === 'leads' ? 'badge-info' : 'badge-success');
+
+  document.getElementById('preview-sheet').textContent = state.sheetName || '—';
+  document.getElementById('preview-rows').textContent = state.rows.length.toLocaleString();
+  document.getElementById('preview-cols').textContent = state.rawHeaders.length;
+
+  const colsSummary = document.getElementById('cols-summary');
+  colsSummary.innerHTML = `Columns detected: <strong>${state.rawHeaders.length}</strong> — ${state.rawHeaders.slice(0, 8).map(h => `<code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px;">${h}</code>`).join(' ')}${state.rawHeaders.length > 8 ? ' …' : ''}`;
+
+  // Build preview table (first 10 mapped rows, using mapped keys)
+  const tableWrap = document.getElementById('preview-table-wrap');
+  if (state.rows.length === 0) {
+    tableWrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px;">⚠️ No valid rows found after mapping. Check column names.</div>';
+    btnImport.disabled = true;
+    return;
+  }
+
+  btnImport.disabled = false;
+
+  const previewRows = state.rows.slice(0, 10);
+  const mappedKeys = Object.keys(previewRows[0]);
+
+  let html = '<table class="preview-table"><thead><tr>';
+  html += mappedKeys.map(k => `<th>${k}</th>`).join('');
+  html += '</tr></thead><tbody>';
+
+  for (const row of previewRows) {
+    html += '<tr>';
+    for (const k of mappedKeys) {
+      const v = row[k];
+      if (v === null || v === undefined) {
+        html += '<td class="null-val">—</td>';
+      } else {
+        const display = String(v).length > 24 ? String(v).slice(0, 24) + '…' : String(v);
+        html += `<td title="${String(v).replace(/"/g,'&quot;')}">${display}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table>';
+  tableWrap.innerHTML = html;
+}
+
+/* ─────────────────────────────────────────────
+   IMPORT FLOW
+──────────────────────────────────────────────── */
+// Session-level conflict resolution memory
+let sessionConflictChoice = sessionStorage.getItem('how_conflict_choice') || null; // 'replace' | 'add'
+
+btnImport.addEventListener('click', () => {
+  if (!parsedState || parsedState.rows.length === 0) {
+    showToast('error', 'No data to import.');
+    return;
+  }
+  startImportFlow();
+});
+
+async function startImportFlow() {
+  btnImport.disabled = true;
+  try {
+    const { table, rows, type } = parsedState;
+
+    // Get existing count
+    let existingCount = 0;
+    try { existingCount = await getCount(table); } catch(e) { /* table may not exist yet */ }
+
+    if (sessionConflictChoice) {
+      // Skip dialog, use remembered choice
+      await executeImport(sessionConflictChoice);
+    } else {
+      showConflictModal(rows.length, existingCount, table, async (choice) => {
+        await executeImport(choice);
+      });
+    }
+  } catch (err) {
+    showToast('error', `Import setup failed: ${err.message}`);
+    btnImport.disabled = false;
+  }
+}
+
+async function executeImport(choice) {
+  const { table, rows, filename, type } = parsedState;
+  const progressSection = document.getElementById('progress-section');
+  const progressLabel = document.getElementById('progress-label');
+  const progressBar = document.getElementById('progress-bar');
+  const logTimestamp = new Date();
+
+  progressSection.classList.add('visible');
+  progressLabel.textContent = 'Preparing…';
+  progressBar.style.width = '0%';
+  btnImport.disabled = true;
+
+  let inserted = 0;
+  let errorMsg = null;
+
+  try {
+    if (choice === 'replace') {
+      progressLabel.textContent = 'Deleting existing rows…';
+      progressBar.style.width = '10%';
+      await deleteAll(table);
+      progressBar.style.width = '20%';
+    }
+
+    let rowsToInsert = rows;
+
+    if (choice === 'add') {
+      // Fetch existing keys to deduplicate
+      progressLabel.textContent = 'Fetching existing records…';
+      progressBar.style.width = '10%';
+      let existingKeys = new Set();
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=nickname,fullname,email&limit=10000`, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        if (r.ok) {
+          const existingRows = await r.json();
+          existingRows.forEach(er => {
+            // members: nickname+fullname; leads: nickname+email
+            if (type === 'leads') {
+              existingKeys.add(`${normKey(er.nickname)}||${normKey(er.email)}`);
+            } else {
+              existingKeys.add(`${normKey(er.nickname)}||${normKey(er.fullname)}`);
+            }
+          });
+        }
+      } catch(e) { /* proceed without dedup */ }
+
+      rowsToInsert = rows.filter(r => {
+        const key = type === 'leads'
+          ? `${normKey(r.nickname)}||${normKey(r.email)}`
+          : `${normKey(r.nickname)}||${normKey(r.fullname)}`;
+        return !existingKeys.has(key);
+      });
+      progressLabel.textContent = `${rowsToInsert.length} new rows to add…`;
+      progressBar.style.width = '20%';
+    }
+
+    if (rowsToInsert.length === 0) {
+      showToast('info', 'No new rows to insert — all already exist.');
+      addLogEntry({ filename, table, rows: 0, status: 'skipped', timestamp: logTimestamp });
+      return;
+    }
+
+    inserted = await batchInsert(table, rowsToInsert, (batchNum, total, offset) => {
+      const pct = 20 + Math.round((offset / rowsToInsert.length) * 78);
+      progressBar.style.width = `${Math.min(pct, 98)}%`;
+      progressLabel.textContent = `Inserting batch ${batchNum} of ${total}…`;
+    });
+
+    progressBar.style.width = '100%';
+    progressLabel.textContent = `Done! ${inserted} rows imported.`;
+    showToast('success', `✅ Imported ${inserted} rows into ${table} successfully!`);
+    addLogEntry({ filename, table, rows: inserted, status: 'success', timestamp: logTimestamp });
+
+  } catch (err) {
+    errorMsg = err.message;
+    progressLabel.textContent = `Error: ${err.message.slice(0, 80)}`;
+    progressBar.style.width = '100%';
+    progressBar.style.background = 'var(--danger)';
+    showToast('error', `Import failed: ${err.message.slice(0, 120)}`);
+    addLogEntry({ filename, table, rows: inserted, status: 'error', error: err.message, timestamp: logTimestamp });
+  } finally {
+    setTimeout(() => {
+      progressSection.classList.remove('visible');
+      progressBar.style.width = '0%';
+      progressBar.style.background = '';
+      btnImport.disabled = false;
+    }, errorMsg ? 4000 : 2500);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   CONFLICT MODAL
+──────────────────────────────────────────────── */
+let modalResolve = null;
+
+function showConflictModal(incomingCount, existingCount, tableName, onChoice) {
+  document.getElementById('modal-incoming').textContent = incomingCount.toLocaleString();
+  document.getElementById('modal-existing').textContent = existingCount.toLocaleString();
+  document.getElementById('modal-table-name').textContent = tableName;
+
+  const backdrop = document.getElementById('modal-backdrop');
+  backdrop.classList.add('visible');
+
+  let selectedChoice = null;
+  const optReplace = document.getElementById('opt-replace');
+  const optAdd = document.getElementById('opt-add');
+  const confirmBtn = document.getElementById('modal-confirm');
+  const cancelBtn = document.getElementById('modal-cancel');
+  const chkRemember = document.getElementById('chk-remember');
+
+  // Reset state
+  optReplace.classList.remove('selected');
+  optAdd.classList.remove('selected');
+  confirmBtn.disabled = true;
+  chkRemember.checked = false;
+  selectedChoice = null;
+
+  function selectOption(choice) {
+    selectedChoice = choice;
+    optReplace.classList.toggle('selected', choice === 'replace');
+    optAdd.classList.toggle('selected', choice === 'add');
+    confirmBtn.disabled = false;
+  }
+
+  optReplace.onclick = () => selectOption('replace');
+  optAdd.onclick = () => selectOption('add');
+
+  confirmBtn.onclick = () => {
+    if (!selectedChoice) return;
+    if (chkRemember.checked) {
+      sessionConflictChoice = selectedChoice;
+      sessionStorage.setItem('how_conflict_choice', selectedChoice);
+    }
+    closeModal();
+    onChoice(selectedChoice);
+  };
+
+  cancelBtn.onclick = () => {
+    closeModal();
+    btnImport.disabled = false;
+  };
+
+  backdrop.onclick = (e) => {
+    if (e.target === backdrop) {
+      closeModal();
+      btnImport.disabled = false;
+    }
+  };
+}
+
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('visible');
+}
+
+/* ─────────────────────────────────────────────
+   IMPORT LOG
+──────────────────────────────────────────────── */
+let logEntries = [];
+
+function addLogEntry({ filename, table, rows, status, error, timestamp }) {
+  logEntries.unshift({ filename, table, rows, status, error, timestamp });
+  renderLog();
+}
+
+function renderLog() {
+  const empty = document.getElementById('log-empty');
+  const list = document.getElementById('log-list');
+
+  if (logEntries.length === 0) {
+    empty.style.display = '';
+    list.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  list.innerHTML = logEntries.map((e, i) => {
+    const icon = e.status === 'success' ? '✅' : e.status === 'skipped' ? '⏭️' : '❌';
+    const timeStr = e.timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const rowsClass = e.status === 'error' ? 'log-rows error' : 'log-rows';
+    const rowsText = e.status === 'error' ? 'Failed' : e.rows === 0 ? 'Skipped' : `${e.rows} rows`;
+    return `
+      <div class="log-item">
+        <div class="log-item-left">
+          <span class="log-status-icon">${icon}</span>
+          <div class="log-info">
+            <div class="log-filename" title="${e.filename}">${e.filename}</div>
+            <div class="log-meta">${e.table}${e.error ? ' — ' + e.error.slice(0, 60) : ''}</div>
+          </div>
+        </div>
+        <div class="log-item-right">
+          <div class="${rowsClass}">${rowsText}</div>
+          <div class="log-time">${timeStr}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('btn-clear-log').addEventListener('click', () => {
+  logEntries = [];
+  renderLog();
+});
+
+/* ─────────────────────────────────────────────
+   TOAST
+──────────────────────────────────────────────── */
+function showToast(type, message, duration = 4000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+/* ─────────────────────────────────────────────
+   INIT
+──────────────────────────────────────────────── */
+initPinScreen();
+renderLog(); // show empty state
+</script>
+</body>
+</html>

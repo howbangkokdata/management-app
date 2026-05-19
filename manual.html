@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HOW Bangkok — คู่มือการใช้งาน Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --gold: #A07830;
+    --gold-mid: #C49A3C;
+    --gold-light: #FBF4E4;
+    --text: #12120E;
+    --text-2: #4A4A44;
+    --muted: #7A7870;
+    --border: #E4E0D8;
+    --bg: #F6F4F1;
+    --surface: #FFFFFF;
+    --alert: #B83228;
+    --alert-light: #FBF0EE;
+    --success: #1C7048;
+    --success-light: #EAF5EE;
+    --blue: #2254A0;
+    --blue-light: #EEF3FC;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: white;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* COVER PAGE */
+  .cover {
+    page-break-after: always;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 80px 72px;
+    background: linear-gradient(150deg, #12120E 0%, #2A2418 60%, #1C1810 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(196,154,60,.15) 0%, transparent 70%);
+  }
+  .cover-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold-mid);
+    margin-bottom: 20px;
+  }
+  .cover-title {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.15;
+    color: white;
+    margin-bottom: 12px;
+  }
+  .cover-title span { color: var(--gold-mid); }
+  .cover-sub {
+    font-size: 18px;
+    font-weight: 400;
+    color: rgba(255,255,255,.6);
+    margin-bottom: 48px;
+    max-width: 480px;
+    line-height: 1.6;
+  }
+  .cover-divider {
+    width: 60px; height: 3px;
+    background: linear-gradient(90deg, var(--gold-mid), transparent);
+    margin-bottom: 36px;
+  }
+  .cover-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cover-meta-item {
+    font-size: 12px;
+    color: rgba(255,255,255,.45);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cover-meta-item strong { color: rgba(255,255,255,.75); font-weight: 600; }
+  .cover-logo {
+    position: absolute;
+    bottom: 48px; right: 72px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,.2);
+    text-transform: uppercase;
+  }
+
+  /* TOC */
+  .toc-page {
+    page-break-after: always;
+    padding: 56px 72px;
+    min-height: 100vh;
+  }
+  .toc-heading {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .toc-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -.5px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+  }
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .toc-item:last-child { border-bottom: none; }
+  .toc-num {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--gold-mid);
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .toc-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+  .toc-desc {
+    font-size: 12px;
+    color: var(--muted);
+    flex: 2;
+  }
+  .toc-dots {
+    flex: 1;
+    border-bottom: 1px dotted var(--border);
+    margin: 0 8px;
+    align-self: center;
+  }
+  .toc-page-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* CONTENT */
+  .page {
+    padding: 52px 72px;
+    max-width: 900px;
+    margin: 0 auto;
+    page-break-inside: auto;
+  }
+  .page-break { page-break-before: always; }
+
+  /* Section Header */
+  .section-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: var(--gold-light);
+    color: var(--gold);
+    border: 1px solid #E4CE9A;
+    border-radius: 4px;
+    padding: 3px 9px;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  h1 .tab-num {
+    display: inline-block;
+    background: var(--text);
+    color: white;
+    font-size: 18px;
+    font-weight: 800;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    margin-right: 10px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+    margin: 28px 0 10px;
+    color: var(--text);
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-2);
+    margin: 18px 0 8px;
+  }
+  p {
+    font-size: 13px;
+    color: var(--text-2);
+    margin-bottom: 10px;
+    line-height: 1.75;
+  }
+  .lead-text {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 24px;
+    padding: 14px 18px;
+    background: var(--bg);
+    border-left: 3px solid var(--gold-mid);
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 12.5px;
+  }
+  thead tr {
+    background: var(--bg);
+  }
+  th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-2);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) { background: #FAFAF8; }
+  td strong { color: var(--text); }
+  td code {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-family: 'SF Mono', 'Consolas', monospace;
+  }
+
+  /* Callout boxes */
+  .callout {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 14px 0;
+    font-size: 12.5px;
+    line-height: 1.65;
+  }
+  .callout.info {
+    background: var(--blue-light);
+    border: 1px solid #C0D0EC;
+    color: var(--blue);
+  }
+  .callout.warning {
+    background: var(--alert-light);
+    border: 1px solid #F0C4BC;
+    color: var(--alert);
+  }
+  .callout.success {
+    background: var(--success-light);
+    border: 1px solid #A8D8BC;
+    color: var(--success);
+  }
+  .callout.gold {
+    background: var(--gold-light);
+    border: 1px solid #E4CE9A;
+    color: var(--gold);
+  }
+  .callout strong { font-weight: 700; }
+
+  /* Step list */
+  .steps {
+    list-style: none;
+    margin: 12px 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--text);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* Badge chips */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .chip.hot { background: #FEF0EC; color: #C94B2A; border: 1px solid #F5C4B5; }
+  .chip.warm { background: #FFF8EC; color: #B07A10; border: 1px solid #F0DFA0; }
+  .chip.cold { background: var(--blue-light); color: var(--blue); border: 1px solid #C0D0EC; }
+  .chip.green { background: var(--success-light); color: var(--success); border: 1px solid #A8D8BC; }
+  .chip.gold { background: var(--gold-light); color: var(--gold); border: 1px solid #E4CE9A; }
+  .chip.gray { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+  /* Process flow */
+  .process-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 10px 0 16px;
+    font-size: 12px;
+  }
+  .pf-step {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-weight: 600;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+  .pf-arrow {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  /* Footer */
+  @page {
+    margin: 0;
+    size: A4;
+  }
+  .page-footer {
+    position: fixed;
+    bottom: 20px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .5px;
+  }
+
+  /* HR divider */
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  /* Summary role table */
+  .role-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .role-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .role-card-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .role-card-tabs {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  ul {
+    margin: 8px 0 14px 20px;
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  ul li { margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ COVER ══════════ -->
+<div class="cover">
+  <div class="cover-eyebrow">คู่มือการใช้งาน · User Manual</div>
+  <div class="cover-title">HOW Bangkok<br><span>Membership</span><br>Intelligence</div>
+  <div class="cover-sub">ระบบวิเคราะห์และติดตามสมาชิก — คู่มือสำหรับทีมงาน</div>
+  <div class="cover-divider"></div>
+  <div class="cover-meta">
+    <div class="cover-meta-item"><strong>เวอร์ชัน</strong> Preview · พฤษภาคม 2569</div>
+    <div class="cover-meta-item"><strong>ครอบคลุม</strong> 5 แท็บหลัก + หน้าตั้งค่า (Config)</div>
+    <div class="cover-meta-item"><strong>ใช้งานได้บน</strong> howbkkdb.web.app (เฉพาะ @howbangkok.com)</div>
+  </div>
+  <div class="cover-logo">HOW BANGKOK</div>
+</div>
+
+<!-- ══════════ TOC ══════════ -->
+<div class="toc-page">
+  <div class="toc-heading">สารบัญ</div>
+  <div class="toc-title">Contents</div>
+
+  <div class="toc-item">
+    <span class="toc-num">—</span>
+    <span class="toc-label">ภาพรวมและการ Login</span>
+    <span class="toc-desc">ระบบนี้คืออะไร · เข้าใช้งานอย่างไร</span>
+    <span class="toc-dots"></span>
+    <span class="toc-page-num">3</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">①</span>
+    <span class="toc-label">มุมมองผู้บริหาร</span>
+    <span class="toc-desc">Simulator · Target Calculator · Renewal Cliff</span>
+    <span class="toc-dots"></span>
+    <span class="toc-page-num">4</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">②</span>
+    <span class="toc-label">สถานะสมาชิก</span>
+    <span class="toc-desc">P&L · Forecast · Vintage · Member Table</span>
+    <span class="toc-dots"></span>
+    <span class="toc-page-num">6</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">③</span>
+    <span class="toc-label">New Sales</span>
+    <span class="toc-desc">Lead Pipeline · Stage Charts · Conversion Funnel</span>
+    <span class="toc-dots"></span>
+    <span class="toc-page-num">9</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">④</span>
+    <span class="toc-label">ต่ออายุ / หมดสัญญา</span>
+    <span class="toc-desc">Renewal Table · Expired Follow-up · Rate Chart</span>
+    <span class="toc-dots"></span>
+    <span class="toc-page-num">11</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">⑤</span>
+    <span class="toc-label">ประวัติสมาชิก</span>
+    <span class="toc-desc">Cohort · Timeline · Longevity Milestone</span>
+    <span class="toc-dots"></span>
+    <span class="toc-page-num">13</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">⚙️</span>
+    <span class="toc-label">หน้าตั้งค่า (Config)</span>
+    <span class="toc-desc">ราคา · Threshold · Renewal Rate · การบันทึก</span>
+    <span class="toc-dots"></span>
+    <span class="toc-page-num">15</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">—</span>
+    <span class="toc-label">สรุปตามบทบาท</span>
+    <span class="toc-desc">ใครควรดูแท็บไหน</span>
+    <span class="toc-dots"></span>
+    <span class="toc-page-num">17</span>
+  </div>
+</div>
+
+<!-- ══════════ OVERVIEW + LOGIN ══════════ -->
+<div class="page page-break">
+  <div class="section-eyebrow">เริ่มต้น</div>
+  <h1>ภาพรวมและการ Login</h1>
+  <div class="lead-text">ระบบนี้ตอบ 3 คำถามหลัก: ฐานสมาชิกสุขภาพดีไหม? Pipeline ใหม่พอไหม? และเราจะถึงเป้าทันไหม?</div>
+
+  <h2>ระบบนี้คืออะไร</h2>
+  <p>HOW Bangkok Membership Intelligence คือ dashboard สำหรับติดตามสุขภาพสมาชิกแบบ real-time เข้าได้ผ่านเบราว์เซอร์ทั่วไป ไม่ต้องติดตั้งอะไร ทุก user ที่ login เห็นข้อมูลชุดเดียวกัน</p>
+
+  <table>
+    <thead><tr><th>แท็บ</th><th>ตอบคำถาม</th></tr></thead>
+    <tbody>
+      <tr><td><strong>① มุมมองผู้บริหาร</strong></td><td>ตอนนี้เราอยู่ที่ไหน และจะถึงเป้าไหม?</td></tr>
+      <tr><td><strong>② สถานะสมาชิก</strong></td><td>P&L เดือนนี้เป็นยังไง? ใครกำลังจะหลุด?</td></tr>
+      <tr><td><strong>③ New Sales</strong></td><td>Pipeline ตอนนี้มีอะไรบ้าง? Conversion rate ดีไหม?</td></tr>
+      <tr><td><strong>④ ต่ออายุ</strong></td><td>ใครต้องต่ออายุบ้าง? แต่ละคนคืบหน้าถึงไหน?</td></tr>
+      <tr><td><strong>⑤ ประวัติ</strong></td><td>HOW เติบโตมายังไง? ใครอยู่มานาน?</td></tr>
+      <tr><td><strong>⚙️ ตั้งค่า</strong></td><td>ปรับตัวเลขที่ใช้คำนวณทั่วทั้งระบบ</td></tr>
+    </tbody>
+  </table>
+
+  <h2>การ Login</h2>
+  <p>ระบบเปิดเฉพาะ email ที่ลงท้ายด้วย <code>@howbangkok.com</code> เท่านั้น</p>
+  <ol class="steps">
+    <li><span class="step-num">1</span><span>เข้าหน้าเว็บ <strong>howbkkdb.web.app</strong></span></li>
+    <li><span class="step-num">2</span><span>กดปุ่ม <strong>"Sign in with Google"</strong></span></li>
+    <li><span class="step-num">3</span><span>เลือก account ที่ลงท้ายด้วย <code>@howbangkok.com</code></span></li>
+    <li><span class="step-num">4</span><span>ระบบจำ session ไว้จนกว่าจะกด <strong>Sign out</strong></span></li>
+  </ol>
+  <div class="callout warning">⚠️ ถ้า login ด้วย email อื่นจะไม่ผ่าน — ต้องสลับ Google account ก่อน</div>
+</div>
+
+<!-- ══════════ TAB 1 ══════════ -->
+<div class="page page-break">
+  <div class="section-eyebrow">แท็บ ①</div>
+  <h1>มุมมองผู้บริหาร</h1>
+  <div class="lead-text">"ตอนนี้เราอยู่ที่ไหน และถ้าทำแบบเดิมต่อไป จะถึงเป้าไหม?"</div>
+
+  <h2>📊 KPI บนสุด (5 ช่อง)</h2>
+  <table>
+    <thead><tr><th>ช่อง</th><th>บอกอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Active Members</strong></td><td>สมาชิกที่ใช้งานอยู่ขณะนี้ (254 คน)</td></tr>
+      <tr><td><strong>Target 2569</strong></td><td>เป้าสมาชิกใหม่ที่ต้องได้ปีนี้ (+200 คน)</td></tr>
+      <tr><td><strong>Added YTD</strong></td><td>สมาชิกใหม่ที่ได้จริงตั้งแต่ต้นปี (27 คน = 13.5% ของเป้า)</td></tr>
+      <tr><td><strong>Revenue</strong></td><td>รายได้จองสะสม ณ ปัจจุบัน</td></tr>
+      <tr><td><strong>Leads/เดือน</strong></td><td>จำนวน lead เฉลี่ย — ถ้าแสดง ⚠️ = น้อยเกินไปแล้ว</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📅 Deadline Bar</h2>
+  <p>เลือก <strong>เดือนและปีที่ต้องการถึงเป้า</strong> จาก dropdown ซ้ายมือ ระบบจะคำนวณใหม่ real-time ว่าเหลือกี่เดือน, ETA คาดถึงเป้าเมื่อไหร่ และทันเวลาหรือไม่</p>
+  <div class="callout gold">✅ chip เขียว = คาดถึงเป้าทัน &nbsp;&nbsp;·&nbsp;&nbsp; ❌ chip แดง = ไม่ทันตามที่ตั้งไว้</div>
+
+  <h2>🎮 Scenario Simulator</h2>
+  <p>ส่วนหลักของแท็บนี้ — ปรับ slider แล้วดูว่าถ้าเปลี่ยนตัวแปร ผลลัพธ์ปลายปีจะเป็นอย่างไร</p>
+
+  <h3>Slider ที่ปรับได้</h3>
+  <table>
+    <thead><tr><th>Slider</th><th>ค่าปัจจุบัน</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Conversion Rate</strong></td><td>23%</td><td>% ของ leads ที่กลายเป็นสมาชิกจ่ายเงิน</td></tr>
+      <tr><td><strong>Leads/เดือน</strong></td><td>2.2 ราย</td><td>จำนวน leads ใหม่ที่เข้ามาต่อเดือน</td></tr>
+      <tr><td><strong>Renewal Rate</strong></td><td>~90%</td><td>% สมาชิกที่คาดว่าจะต่ออายุ</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Output ที่เปลี่ยนตาม slider</h3>
+  <ul>
+    <li>สมาชิกใหม่ทั้งปี vs เป้า 200 คน</li>
+    <li>รวมสมาชิกปลายปี · รายได้ใหม่ · คนที่คาด churn</li>
+    <li>ETA (คาดถึงเป้าเดือนไหน) และสถานะ on-time/late</li>
+    <li>กราฟสมาชิกสะสม — เส้นทอง = คาดการณ์, เส้นแดง = เป้าหมาย</li>
+  </ul>
+
+  <div class="callout info">💡 <strong>ลองทำ:</strong> ขยับ Leads/Month จาก 2 → 15 เพื่อดูว่าถ้าเพิ่ม pipeline ได้จริง จะถึงเป้าธ.ค. ได้ไหม</div>
+
+  <h2>🎯 Target Calculator (Reverse Funnel)</h2>
+  <p>กรอกเป้าหมายจำนวนสมาชิกที่ต้องการ → ระบบคำนวณย้อนกลับว่า <strong>ต้องหา leads กี่รายต่อเดือน</strong> ที่แต่ละระดับ Conversion Rate (10%, 25%, 40%)</p>
+  <p>ใช้ตัดสินใจว่า เป้าที่ตั้งไว้ต้องการ sales effort ระดับไหน ถ้า conversion ดีขึ้นจะลดภาระ lead generation ได้แค่ไหน</p>
+
+  <h2>🚨 Renewal Cliff</h2>
+  <p>กราฟแท่งแสดงสมาชิกที่จะหมดอายุแต่ละเดือน ช่วยวางแผนว่าเดือนไหนต้องเตรียม renewal process เยอะเป็นพิเศษ</p>
+  <div class="callout warning">⚠️ <strong>ธ.ค. 2569 มีสมาชิกหมดพร้อมกัน 61 คน</strong> (24% ของฐาน) — ต้องเริ่ม follow ตั้งแต่ ก.ย. เป็นอย่างช้า</div>
+</div>
+
+<!-- ══════════ TAB 2 ══════════ -->
+<div class="page page-break">
+  <div class="section-eyebrow">แท็บ ②</div>
+  <h1>สถานะสมาชิก</h1>
+  <div class="lead-text">"P&L เดือนนี้เป็นยังไง? ใครกำลังจะหลุด? และถ้าปรับ renewal rate จะกระทบยังไง?"</div>
+
+  <h2>📊 KPI บนสุด (4 ช่อง)</h2>
+  <table>
+    <thead><tr><th>ช่อง</th><th>บอกอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Active Members</strong></td><td>รวมสมาชิกทั้งหมดที่ยังใช้งาน</td></tr>
+      <tr><td><strong>Critical &lt;30 วัน</strong></td><td>คนที่หมดอายุใน 30 วัน — <span class="chip hot">🔴 ต้องติดต่อทันที</span></td></tr>
+      <tr><td><strong>Soon 30–90 วัน</strong></td><td>คนที่จะหมดใน 1–3 เดือน — <span class="chip warm">🟠 เริ่ม process ได้เลย</span></td></tr>
+      <tr><td><strong>Health Score เฉลี่ย</strong></td><td>คะแนนสุขภาพสมาชิกรวม (0–100)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>💰 P&L Monthly Intelligence</h2>
+  <p>แสดงสถานะการเงินเดือนปัจจุบัน แบ่งเป็น 5 ช่องตัวเลขบนสุด:</p>
+  <table>
+    <thead><tr><th>ช่อง</th><th>บอกอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Paid Members</strong></td><td>สมาชิกที่จ่ายเงิน — ไม่รวม Barter และ Invitation</td></tr>
+      <tr><td><strong>รายได้/เดือน</strong></td><td>Paid Members × ค่าสมาชิก ÷ 12 (ปรับราคาได้ใน Config)</td></tr>
+      <tr><td><strong>รายได้เสี่ยงหาย</strong></td><td>ถ้าสมาชิกที่หมด &lt;30 วันไม่ต่ออายุ รายได้จะหายไปเท่าไหร่</td></tr>
+      <tr><td><strong>คชจ/เดือน</strong></td><td>ค่าใช้จ่ายรวม — แก้ไขได้จากตารางด้านล่าง</td></tr>
+      <tr><td><strong>กำไร/ขาดทุน</strong></td><td>รายได้ลบค่าใช้จ่าย — สีเขียว = กำไร, สีแดง = ขาดทุน</td></tr>
+    </tbody>
+  </table>
+
+  <h3>ตาราง Cost Breakdown — แก้ไขได้</h3>
+  <p>แต่ละบรรทัดคือหมวดค่าใช้จ่าย กรอกตัวเลขได้โดยตรง (รองรับ comma เช่น "1,200,000") กด Enter หรือคลิกออกเพื่อ confirm ยอดรวมอัปเดตทันที</p>
+  <div class="callout gold">+ กด <strong>"+ เพิ่มรายการ"</strong> เพื่อเพิ่มหมวดค่าใช้จ่ายใหม่ได้ เช่น "ค่าซ่อมบำรุง", "ค่าอีเวนต์พิเศษ"</div>
+
+  <h3>Scenario Selector — เลือกสมมติฐาน</h3>
+  <p>กระทบ "รายได้เสี่ยงหาย" และ Forecast chart ทันที</p>
+  <table>
+    <thead><tr><th>ปุ่ม</th><th>สมมติฐาน</th><th>ใช้เมื่อไหร่</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip hot">❌ Worst (0%)</span></td><td>สมาชิกที่หมดทุกคนไม่ต่อ</td><td>ดู worst case / stress test</td></tr>
+      <tr><td><span class="chip warm">📊 Expected (85%)</span></td><td>ใช้ค่า Renewal Rate จาก Config</td><td>การวางแผนปกติ</td></tr>
+      <tr><td><span class="chip green">✅ Best (100%)</span></td><td>ทุกคนต่ออายุหมด</td><td>ดู upside สูงสุด</td></tr>
+      <tr><td><span class="chip gray">Custom %</span></td><td>กรอก % เอง</td><td>ทดสอบ scenario เฉพาะ</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Forecast Chart — 6 เดือนข้างหน้า</h3>
+  <p>กราฟเส้น 2 เส้นเปรียบเทียบ <strong>รายได้ที่คาด</strong> (ลดลงตามคนที่หมดอายุ) vs <strong>ค่าใช้จ่าย</strong> ถ้าเส้นรายได้ต่ำกว่าเส้นค่าใช้จ่ายในเดือนไหน = เดือนนั้นเสี่ยงขาดทุน</p>
+</div>
+
+<div class="page">
+  <h2>⏳ Vintage Buckets — แบ่งกลุ่มตามเวลาที่เหลือ</h2>
+  <p>แสดงว่าสมาชิกทั้งหมดกระจายอยู่ใน bucket ไหน:</p>
+  <table>
+    <thead><tr><th>Bucket</th><th>เวลาที่เหลือ</th><th>สีและความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip hot">🔴 Critical</span></td><td>&lt;30 วัน</td><td>วิกฤต — ต้องโทรหาตอนนี้</td></tr>
+      <tr><td><span class="chip warm">🟠 Soon</span></td><td>30–90 วัน</td><td>ใกล้หมด — เริ่มส่ง proposal ได้</td></tr>
+      <tr><td><span class="chip gold">🟡 Watch</span></td><td>90–180 วัน</td><td>เฝ้าระวัง</td></tr>
+      <tr><td><span class="chip green">🟢 Safe</span></td><td>180+ วัน</td><td>ปลอดภัย</td></tr>
+    </tbody>
+  </table>
+  <div class="callout info">ℹ️ เส้นแบ่ง bucket เหล่านี้ปรับได้ใน <strong>⚙️ ตั้งค่า → Threshold วันหมดอายุ</strong></div>
+
+  <h2>👥 Member Directory</h2>
+  <p>ตารางแสดงรายชื่อสมาชิก กรองได้ 3 มิติพร้อมกัน:</p>
+  <ul>
+    <li><strong>Vintage</strong> — เหลือกี่วัน (Critical / Soon / Watch / Safe)</li>
+    <li><strong>ประเภท</strong> — Renew / Fellow / Distinguish / Invitation / Barter</li>
+    <li><strong>สถานะ</strong> — Active / Expiring / &lt;30 วัน</li>
+  </ul>
+  <p><strong>คอลัมน์ในตาราง:</strong> ชื่อเล่น · ชื่อจริง · ประเภทสมาชิก · ราคา/ปี · วันหมดอายุ · วันที่เหลือ · สถานะ</p>
+  <div class="callout info">ℹ️ ปัจจุบันแสดงตัวอย่างข้อมูล Phase 2 จะดึงข้อมูลครบทุกคนจาก Firestore อัตโนมัติ</div>
+
+  <h2>❤️ Health Score Card</h2>
+  <p>แสดงการกระจาย Health Score ของสมาชิก คำนวณจากระดับการใช้บริการ + Vintage แบ่งเป็น 3 ระดับ:</p>
+  <table>
+    <thead><tr><th>ระดับ</th><th>คะแนน</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip green">🟢 Healthy</span></td><td>80–100</td><td>ใช้บริการสม่ำเสมอ ความเสี่ยง churn ต่ำ</td></tr>
+      <tr><td><span class="chip warm">🟡 Watch</span></td><td>40–79</td><td>ใช้บริการปานกลาง → เพิ่ม touchpoint</td></tr>
+      <tr><td><span class="chip hot">🔴 At Risk</span></td><td>0–39</td><td>ใช้บริการน้อยมาก → รีบติดต่อก่อนหมดอายุ</td></tr>
+    </tbody>
+  </table>
+  <div class="callout gold">Phase 2: เชื่อมข้อมูล check-in จริงจากระบบเพื่อความแม่นยำสูงขึ้น</div>
+</div>
+
+<!-- ══════════ TAB 3 ══════════ -->
+<div class="page page-break">
+  <div class="section-eyebrow">แท็บ ③</div>
+  <h1>New Sales</h1>
+  <div class="lead-text">"Pipeline ตอนนี้มีอะไรบ้าง และถ้าไม่เร่ง จะถึงเป้าได้ยังไง?"</div>
+
+  <h2>📋 Pipeline Summary (บนสุด)</h2>
+  <table>
+    <thead><tr><th>ช่อง</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip hot">🔴 Hot</span></td><td>Leads ใหม่ หรือ active มาก — ต้องรีบปิด</td></tr>
+      <tr><td><span class="chip warm">🟡 Warm</span></td><td>กำลัง nurture อยู่</td></tr>
+      <tr><td><span class="chip cold">🔵 Cold</span></td><td>ผลัดนัด หรือเงียบไปนาน</td></tr>
+      <tr><td><strong>📋 ทั้งหมด</strong></td><td>รวม leads YTD ม.ค.–เม.ย. 2569</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🎯 Lead Pipeline Table</h2>
+  <p>ตารางรายชื่อ leads ทุกคน กรองได้ตาม <strong>Label</strong> (Hot/Warm/Cold) และ <strong>Source</strong> (Refer / FB Ad / Walk-in)</p>
+
+  <h3>Auto-Label Logic — ระบบคำนวณอัตโนมัติ</h3>
+  <table>
+    <thead><tr><th>Label</th><th>เงื่อนไข</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip hot">Hot</span></td><td>ติดต่อล่าสุด ≤ 14 วัน</td></tr>
+      <tr><td><span class="chip warm">Warm</span></td><td>ติดต่อล่าสุด 15–60 วัน</td></tr>
+      <tr><td><span class="chip cold">Cold</span></td><td>ติดต่อล่าสุด &gt;60 วัน หรือผลัดนัด ≥ 2 ครั้ง</td></tr>
+    </tbody>
+  </table>
+
+  <h3>คอลัมน์สำคัญในตาราง</h3>
+  <table>
+    <thead><tr><th>คอลัมน์</th><th>บอกอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Process</strong></td><td>แถบ progress แสดง stage ปัจจุบัน จาก 8 ขั้นตอน</td></tr>
+      <tr><td><strong>Label</strong></td><td>Hot/Warm/Cold (คำนวณอัตโนมัติ)</td></tr>
+      <tr><td><strong>PIC</strong></td><td>ผู้รับผิดชอบ lead รายนี้</td></tr>
+      <tr><td><strong>วันแรก</strong></td><td>วันที่ lead เข้ามาครั้งแรก</td></tr>
+      <tr><td><strong>ล่าสุด</strong></td><td>วันที่ติดต่อล่าสุด</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8 Stage Process</h3>
+  <div class="process-flow">
+    <span class="pf-step">📋 Info</span><span class="pf-arrow">→</span>
+    <span class="pf-step">📞 Contact</span><span class="pf-arrow">→</span>
+    <span class="pf-step">📅 Appoint</span><span class="pf-arrow">→</span>
+    <span class="pf-step">🏋 Visit</span><span class="pf-arrow">→</span>
+    <span class="pf-step">🤔 Consider</span><span class="pf-arrow">→</span>
+    <span class="pf-step">📞 Follow</span><span class="pf-arrow">→</span>
+    <span class="pf-step">💰 Billing</span><span class="pf-arrow">→</span>
+    <span class="pf-step">✅ On-board</span>
+  </div>
+
+  <h2>🌊 Pipeline Stage Chart + Lead Source Chart</h2>
+  <p>กราฟแท่ง (ด้านขวา) แสดงจำนวน leads ในแต่ละ stage — ช่วยหา <strong>bottleneck</strong> ว่าสมาชิกส่วนใหญ่ติดค้างอยู่ที่ขั้นตอนไหน</p>
+  <p>กราฟวงกลมด้านล่างแสดงสัดส่วนที่มาของ leads (Refer / FB Ad / Walk-in) — ช่วยตัดสินใจว่าควรลงทุน channel ไหน</p>
+
+  <h2>📊 Monthly Summary + Conversion Funnel</h2>
+  <p>แสดง funnel จาก Lead In → Active → Considering → On-board พร้อม conversion rate รายขั้น</p>
+  <div class="callout warning">⚠️ <strong>ปัญหาหลักตอนนี้ไม่ใช่ Conversion Rate (23%) แต่คือ Volume ของ Leads</strong><br>
+  มีเพียง 3.3 leads/เดือน ต้องเพิ่มอย่างน้อย 6–10 เท่าถึงจะถึงเป้า 200 คน</div>
+</div>
+
+<!-- ══════════ TAB 4 ══════════ -->
+<div class="page page-break">
+  <div class="section-eyebrow">แท็บ ④</div>
+  <h1>ต่ออายุ / หมดสัญญา</h1>
+  <div class="lead-text">"ใครต้องต่ออายุบ้าง? แต่ละคน process ไปถึงไหนแล้ว? ใครหมดไปแล้วแต่ยังไม่ติดตาม?"</div>
+
+  <h2>📊 KPI บนสุด (5 ช่อง)</h2>
+  <table>
+    <thead><tr><th>ช่อง</th><th>บอกอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip hot">🔴 Hot &lt;30 วัน</span></td><td>เหลือเวลาน้อย — ต้องโทรหาทันที</td></tr>
+      <tr><td><span class="chip warm">🟡 Warm 30–90 วัน</span></td><td>ใกล้หมด — เริ่ม process ได้</td></tr>
+      <tr><td><span class="chip green">✅ ต่ออายุแล้ว</span></td><td>จำนวนที่ต่ออายุในเดือนนี้</td></tr>
+      <tr><td><strong>Renew Rate</strong></td><td>% ที่ต่ออายุเทียบกับที่ควรต่อเดือนนั้น</td></tr>
+      <tr><td><span class="chip hot">⚠️ หมดแล้ว</span></td><td>หมดอายุไปแล้วแต่ยังไม่ได้ต่อ</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🔄 Renewal Management Table</h2>
+  <p>ตารางหลักของแท็บนี้ แสดงทุกคนที่กำลังจะหมดอายุ กรองได้ 2 มิติ:</p>
+  <ul>
+    <li><strong>Renewal Label</strong> — Hot / Warm / Cold</li>
+    <li><strong>Outcome</strong> — กำลังดำเนิน / ต่ออายุแล้ว / เลื่อน / ไม่ต่อ</li>
+  </ul>
+
+  <h3>คอลัมน์สำคัญ</h3>
+  <table>
+    <thead><tr><th>คอลัมน์</th><th>บอกอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Process Progress</strong></td><td>แถบ progress แสดง stage ปัจจุบัน</td></tr>
+      <tr><td><strong>Stage ปัจจุบัน</strong></td><td>อยู่ขั้นตอนไหนใน renewal flow</td></tr>
+      <tr><td><strong>Outcome</strong></td><td>⏳ กำลังดำเนิน · ✅ ต่อแล้ว · ⏸ เลื่อน · ❌ ไม่ต่อ</td></tr>
+      <tr><td><strong>Notes</strong></td><td>บันทึกเพิ่มเติมของสมาชิกรายนั้น</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Renewal Process Flow</h3>
+  <div class="process-flow">
+    <span class="pf-step">📧 Email</span><span class="pf-arrow">→</span>
+    <span class="pf-step">📱 Line Info</span><span class="pf-arrow">→</span>
+    <span class="pf-step">💬 Talk</span><span class="pf-arrow">→</span>
+    <span class="pf-step">📋 QT</span><span class="pf-arrow">→</span>
+    <span class="pf-step">💰 Billing</span><span class="pf-arrow">→</span>
+    <span class="pf-step">✅ Payment</span>
+  </div>
+
+  <h2>⚠️ Expired Members — ติดตาม Follow Up</h2>
+  <p>สมาชิกที่หมดอายุไปแล้วแต่ยังไม่ได้ต่อ กรองได้ตามระยะเวลาที่หมดไป (7 / 14 / 30 / 90 วัน)</p>
+  <p>ใช้เพื่อ: ดูว่ายังมีโอกาส win-back ไหม หรือถือว่า churned ถาวรแล้ว</p>
+
+  <h2>📈 Renewal Rate Chart</h2>
+  <p>กราฟเส้นแสดง % ต่ออายุรายเดือน เทียบกับเป้า 90% ช่วยดู trend ว่า renewal health ดีขึ้นหรือแย่ลง</p>
+</div>
+
+<!-- ══════════ TAB 5 ══════════ -->
+<div class="page page-break">
+  <div class="section-eyebrow">แท็บ ⑤</div>
+  <h1>ประวัติสมาชิก</h1>
+  <div class="lead-text">"HOW เติบโตมายังไง? ใครอยู่มานาน? Cohort ไหน retention ดีที่สุด?"</div>
+
+  <h2>📊 KPI บนสุด (4 ช่อง)</h2>
+  <table>
+    <thead><tr><th>ช่อง</th><th>บอกอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><strong>สมาชิกที่เคยเข้าร่วม</strong></td><td>Unique members ทั้งหมดตั้งแต่ก่อตั้ง (346+ คน)</td></tr>
+      <tr><td><strong>ยังอยู่ในระบบ</strong></td><td>Active อยู่ตอนนี้ (254 คน)</td></tr>
+      <tr><td><strong>หมดสัญญาแล้ว</strong></td><td>Churned ไปแล้ว · overall churn rate ~27%</td></tr>
+      <tr><td><strong>Founding ยังอยู่</strong></td><td>สมาชิกรุ่นก่อตั้ง ก.พ. 2567 ที่ยังคงอยู่ — retention 98%</td></tr>
+    </tbody>
+  </table>
+
+  <h2>📅 Cohort Analysis</h2>
+  <p>ตารางแบ่งสมาชิกตามปีที่เข้าร่วม (Cohort) แสดง 4 คอลัมน์:</p>
+  <table>
+    <thead><tr><th>คอลัมน์</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><strong>เคยเข้า</strong></td><td>จำนวนสมาชิกที่เคยเข้าร่วม cohort ปีนั้น</td></tr>
+      <tr><td><strong>Active</strong></td><td>ยังอยู่ตอนนี้</td></tr>
+      <tr><td><strong>ออก</strong></td><td>Churned ไปแล้ว</td></tr>
+      <tr><td><strong>Retention</strong></td><td>% ที่ยังอยู่ พร้อม progress bar เพื่อเปรียบเทียบง่าย</td></tr>
+    </tbody>
+  </table>
+  <p>ใช้เพื่อ: เปรียบเทียบว่า cohort ไหน retention ดีกว่ากัน → เข้าใจว่าช่วงไหนองค์กรเติบโตดี</p>
+
+  <h2>📋 1-Year vs 3-Year Retention</h2>
+  <p>เปรียบเทียบ retention ระหว่างสมาชิกสัญญา 1 ปี vs 3 ปี ช่วยตัดสินใจว่าควรผลักดัน package ไหนในการขาย</p>
+
+  <h2>💡 เรื่องเล่าสำหรับผู้บริหาร</h2>
+  <p>Insight box สรุปตัวเลขสำคัญในรูปประโยคภาษาไทยที่อ่านเข้าใจง่าย เช่น "ตั้งแต่ก่อตั้ง HOW มีสมาชิก 346+ ราย ยังอยู่ 254 ราย Founding cohort มี retention 98%" เหมาะสำหรับใช้เป็น talking points</p>
+
+  <h2>📈 Timeline Chart</h2>
+  <p>กราฟแท่งแสดงรายเดือน:</p>
+  <ul>
+    <li><strong>สีทอง</strong> = สมาชิกใหม่ที่เข้าร่วม</li>
+    <li><strong>สีแดง</strong> = สมาชิกที่หมดสัญญา</li>
+  </ul>
+  <p>เห็น momentum การเติบโตและ churn wave ว่าเดือนไหนผิดปกติ</p>
+
+  <h2>🏅 Longevity — สมาชิกที่อยู่มานาน</h2>
+  <p>ตารางแสดงสมาชิกที่อยู่มานานที่สุด เรียงตามวันหมดสัญญาล่าสุด ช่วยหา <strong>"ambassador"</strong> — คนที่ต่ออายุซ้ำหลายรอบ และมีแนวโน้ม refer คนอื่นเข้ามา</p>
+  <div class="callout info">ℹ️ ข้อมูลแท็บนี้อ่านจาก Excel ที่ import ไว้ start date บางรายอาจ inferred จาก end date</div>
+</div>
+
+<!-- ══════════ CONFIG ══════════ -->
+<div class="page page-break">
+  <div class="section-eyebrow">หน้าตั้งค่า</div>
+  <h1>⚙️ Config — ตั้งค่าระบบ</h1>
+  <div class="lead-text">กด "⚙️ ตั้งค่า" มุมขวาบนของ header — การเปลี่ยนแปลงใน Config กระทบทุกอย่างในระบบ และทุก user เห็นพร้อมกัน</div>
+
+  <div class="callout warning">⚠️ <strong>สำคัญ:</strong> Config บันทึกลง Firestore — ทุก user ที่ login เห็นค่าใหม่ทันที ควรตรวจสอบให้แน่ใจก่อนกด "บันทึก"</div>
+
+  <h2>💰 ส่วนที่ 1 — ราคาสมาชิก (บาท/ปี)</h2>
+  <p>กรอกราคาแต่ละประเภท ใช้สำหรับคำนวณรายได้ใน P&L และ Forecast chart รองรับ comma เช่น "350,000"</p>
+  <table>
+    <thead><tr><th>Field</th><th>Default</th><th>กระทบอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><strong>New Member</strong></td><td>฿420,000</td><td>คำนวณรายได้จากสมาชิกใหม่</td></tr>
+      <tr><td><strong>Renew (ต่ออายุ)</strong></td><td>฿350,000</td><td>รายได้/เดือน · Forecast · รายได้เสี่ยงหาย</td></tr>
+      <tr><td><strong>Distinguish / 3-Year</strong></td><td>—</td><td>สมาชิก Distinguish (กรอกเมื่อทราบ)</td></tr>
+      <tr><td><strong>Family</strong></td><td>฿650,000</td><td>สมาชิกแบบครอบครัว</td></tr>
+      <tr><td><strong>Corporate</strong></td><td>฿380,000</td><td>สมาชิกองค์กร</td></tr>
+      <tr><td><strong>Fellow / Invite</strong></td><td>฿0</td><td>ประเภทไม่เสียค่าใช้จ่าย</td></tr>
+    </tbody>
+  </table>
+
+  <h2>🎯 ส่วนที่ 2 — Threshold วันหมดอายุ</h2>
+  <p>กำหนดว่าเส้นแบ่ง Hot/Warm/Cold คือกี่วัน กระทบ <strong>สีในทุกตาราง</strong>, badge แจ้งเตือน, กราฟ Forecast และ Renewal tab ทั้งหมด</p>
+  <table>
+    <thead><tr><th>Field</th><th>Default</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip hot">🔴 Critical / Hot</span></td><td>30 วัน</td><td>เหลือ ≤ X วัน → แดง ต้องเร่งด่วน</td></tr>
+      <tr><td><span class="chip warm">🟠 Soon / Warm</span></td><td>90 วัน</td><td>เหลือ ≤ X วัน → ส้ม ควรติดตาม</td></tr>
+      <tr><td><span class="chip gold">🟡 Watch / Cold</span></td><td>180 วัน</td><td>เหลือ ≤ X วัน → ขึ้นในตาราง Renewal</td></tr>
+    </tbody>
+  </table>
+  <div class="callout info">💡 <strong>ตัวอย่าง:</strong> ถ้าอยากให้ระบบเตือน "Hot" เร็วขึ้น → เปลี่ยน Critical จาก 30 → 45 วัน เพื่อให้ทีมมีเวลา follow up มากขึ้น</div>
+</div>
+
+<div class="page">
+  <h2>📊 ส่วนที่ 3 — Forecast & Renewal</h2>
+  <table>
+    <thead><tr><th>Field</th><th>Default</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Renewal Rate</strong></td>
+        <td>85%</td>
+        <td>% สมาชิกที่คาดว่าจะต่ออายุ — ใช้ใน Forecast chart และปุ่ม "Expected" ในแท็บ ②</td>
+      </tr>
+      <tr>
+        <td><strong>Expired Filter เริ่มต้น</strong></td>
+        <td>30 วัน</td>
+        <td>Tab ④ section "หมดแล้ว" จะแสดงสมาชิกที่หมดไปในช่วงกี่วัน</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>💾 การบันทึกและรีเซ็ต</h2>
+  <table>
+    <thead><tr><th>ปุ่ม</th><th>ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><strong>💾 บันทึก</strong></td><td>บันทึกลง Firestore — ทุก user เห็นค่าใหม่ทันที แสดงวันเวลาที่บันทึกล่าสุด</td></tr>
+      <tr><td><strong>↺ รีเซ็ต</strong></td><td>กลับค่า default ทั้งหมด (ต้องกด "บันทึก" อีกรอบถึงจะมีผล)</td></tr>
+    </tbody>
+  </table>
+  <div class="callout gold">📌 ด้านล่าง panel แสดงว่า Config ถูกอัปเดตล่าสุดเมื่อไหร่ และโดย email ใคร</div>
+  <p>กด <strong>✕</strong> หรือคลิกนอก panel เพื่อปิด</p>
+</div>
+
+<!-- ══════════ SUMMARY BY ROLE ══════════ -->
+<div class="page page-break">
+  <div class="section-eyebrow">สรุป</div>
+  <h1>ใครควรดูแท็บไหน</h1>
+  <div class="lead-text">แต่ละบทบาทมีข้อมูลที่เกี่ยวข้องต่างกัน — ใช้ตารางนี้เป็น starting point</div>
+
+  <table>
+    <thead><tr><th>บทบาท</th><th>แท็บหลัก</th><th>ดูส่วนไหน</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>ผู้บริหาร / CEO</strong></td>
+        <td>① + ⑤</td>
+        <td>KPI summary · Simulator · Cohort retention · ตัวเลขใน "เรื่องเล่าผู้บริหาร"</td>
+      </tr>
+      <tr>
+        <td><strong>ทีม Sales</strong></td>
+        <td>③ + ①</td>
+        <td>Lead Pipeline · Stage bottleneck · Target Calculator</td>
+      </tr>
+      <tr>
+        <td><strong>ทีม Member Relations</strong></td>
+        <td>② + ④</td>
+        <td>Vintage bucket · Critical list · Renewal table · Expired follow-up</td>
+      </tr>
+      <tr>
+        <td><strong>ทีม Finance</strong></td>
+        <td>② + ⚙️</td>
+        <td>P&L · Forecast chart · ปรับราคาสมาชิกใน Config</td>
+      </tr>
+      <tr>
+        <td><strong>ผู้ดูแลระบบ</strong></td>
+        <td>⚙️ ทุกส่วน</td>
+        <td>Threshold · Renewal Rate · ราคาทุกประเภท · ตรวจสอบ last updated</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <h2>⚡ Quick Reference — สิ่งที่ทำได้บ่อย</h2>
+  <table>
+    <thead><tr><th>ต้องการทำอะไร</th><th>ไปที่</th></tr></thead>
+    <tbody>
+      <tr><td>ดูว่าใครหมดอายุใน 30 วัน</td><td>Tab ② → กด filter "🔴 &lt;30 วัน" หรือ Tab ④ → Hot</td></tr>
+      <tr><td>ดู P&L เดือนนี้กำไรหรือขาดทุน</td><td>Tab ② → ช่อง "💡 กำไร/ขาดทุน"</td></tr>
+      <tr><td>ทดสอบว่าถ้า renewal ลด จะกระทบยังไง</td><td>Tab ② → Scenario Selector → เลือก Worst หรือ Custom</td></tr>
+      <tr><td>ดูว่าต้อง lead กี่รายถึงจะถึงเป้า</td><td>Tab ① → Target Calculator</td></tr>
+      <tr><td>ดู leads ที่ hot ต้องปิดด่วน</td><td>Tab ③ → กด filter "🔴 Hot"</td></tr>
+      <tr><td>ดู Cohort retention ตามปี</td><td>Tab ⑤ → Cohort Analysis</td></tr>
+      <tr><td>เปลี่ยนราคาสมาชิก / ปรับ threshold</td><td>กด ⚙️ ตั้งค่า → บันทึก</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <div class="callout gold">
+    <strong>Phase 2 (กำลังพัฒนา):</strong> Sales CRM Lite · Member Check-in จากระบบจริง · Auto Alert ทาง LINE/Email · Payment Tracking · Smart Tagging · Live Data จาก Firestore<br><br>
+    ระบบปัจจุบัน (Preview) ใช้ข้อมูลที่ import ไว้ล่วงหน้า — Phase 2 จะอัปเดต real-time ทุก metric
+  </div>
+
+  <div style="margin-top:40px; padding-top:24px; border-top:1px solid var(--border); text-align:center;">
+    <div style="font-size:11px; font-weight:800; letter-spacing:2px; color:var(--gold-mid); text-transform:uppercase; margin-bottom:4px;">HOW BANGKOK</div>
+    <div style="font-size:11px; color:var(--muted);">Membership Intelligence · Preview พ.ค. 2569 · ใช้ภายใน</div>
+  </div>
+</div>
+
+</body>
+</html>

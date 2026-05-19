@@ -1,0 +1,2456 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOW Bangkok — ระบบวิเคราะห์สมาชิก</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg:#F6F4F1; --surface:#FFFFFF; --border:#E4E0D8; --border-subtle:#EDEAE4;
+      --gold:#A07830; --gold-mid:#C49A3C; --gold-light:#FBF4E4;
+      --text:#12120E; --text-2:#4A4A44; --muted:#7A7870; --subtle:#A8A69E;
+      --alert:#B83228; --alert-light:#FBF0EE; --alert-border:#F0C4BC;
+      --success:#1C7048; --success-light:#EAF5EE; --success-border:#A8D8BC;
+      --blue:#2254A0; --blue-light:#EEF3FC; --blue-border:#C0D0EC;
+      --hot:#C94B2A; --hot-light:#FEF0EC; --hot-border:#F5C4B5;
+      --warm:#B07A10; --warm-light:#FFF8EC; --warm-border:#F0DFA0;
+      --cold:#2254A0; --cold-light:#EEF3FC; --cold-border:#C0D0EC;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+
+    /* HEADER */
+    .header{background:var(--surface);border-bottom:1px solid var(--border);height:52px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+    .brand{font-size:11.5px;font-weight:800;letter-spacing:2.5px;color:var(--gold);}
+    .brand-sep{width:1px;height:14px;background:var(--border);margin:0 14px;}
+    .brand-sub{font-size:12px;color:var(--muted);}
+    .header-badge{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 10px;}
+
+    /* TABS */
+    .tabs{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 28px;overflow-x:auto;}
+    .tab-btn{padding:12px 16px;font-size:12px;font-weight:500;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap;}
+    .tab-btn:hover{color:var(--text-2);}
+    .tab-btn.active{color:var(--gold);font-weight:700;border-bottom-color:var(--gold);}
+    .tab-panel{display:none;}
+    .tab-panel.active{display:block;}
+
+    /* LAYOUT */
+    .content{padding:20px 28px;max-width:1300px;margin:0 auto;}
+
+    /* METRIC CARDS */
+    .metrics-row{display:grid;gap:12px;margin-bottom:14px;}
+    .metrics-5{grid-template-columns:repeat(5,1fr);}
+    .metrics-4{grid-template-columns:repeat(4,1fr);}
+    .metrics-3{grid-template-columns:repeat(3,1fr);}
+    @media(max-width:1000px){.metrics-5,.metrics-4{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:640px){.metrics-5,.metrics-4,.metrics-3{grid-template-columns:repeat(2,1fr);}}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;position:relative;overflow:hidden;}
+    .metric-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--border);}
+    .metric-card.gold::before{background:var(--gold-mid);}
+    .metric-card.success::before{background:var(--success);}
+    .metric-card.alert::before{background:var(--alert);}
+    .metric-card.blue::before{background:var(--blue);}
+    .metric-card.hot::before{background:var(--hot);}
+    .metric-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    .metric-value{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;}
+    .metric-card.gold .metric-value{color:var(--gold);}
+    .metric-card.success .metric-value{color:var(--success);}
+    .metric-card.alert .metric-value{color:var(--alert);}
+    .metric-card.blue .metric-value{color:var(--blue);}
+    .metric-card.hot .metric-value{color:var(--hot);}
+    .metric-sub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.3;}
+
+    /* DEADLINE BAR */
+    .deadline-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 20px;display:flex;align-items:center;flex-wrap:wrap;gap:0;margin-bottom:16px;}
+    .db-section{display:flex;align-items:center;gap:10px;padding:0 20px;border-right:1px solid var(--border);}
+    .db-section:first-child{padding-left:0;}
+    .db-section:last-child{border-right:none;}
+    .db-label{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;}
+    .dl-select{font-size:13px;font-weight:700;color:var(--gold);background:var(--gold-light);border:1.5px solid #E4CE9A;border-radius:6px;padding:4px 8px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;}
+    .db-val{font-size:20px;font-weight:800;letter-spacing:-.5px;}
+    .db-val-unit{font-size:11px;color:var(--muted);margin-left:3px;}
+    .eta-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;}
+    .eta-chip.on-time{background:var(--success-light);color:var(--success);border:1px solid var(--success-border);}
+    .eta-chip.late{background:var(--alert-light);color:var(--alert);border:1px solid var(--alert-border);}
+    .eta-chip.no-data{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+
+    /* CARDS */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:16px;}
+    .card-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+    .feature-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;background:var(--gold-light);color:var(--gold);border:1px solid #E4CE9A;border-radius:4px;padding:2px 8px;margin-bottom:5px;}
+    .feature-tag.alert{background:var(--alert-light);color:var(--alert);border-color:var(--alert-border);}
+    .feature-tag.blue{background:var(--blue-light);color:var(--blue);border-color:var(--blue-border);}
+    .feature-tag.success{background:var(--success-light);color:var(--success);border-color:var(--success-border);}
+    .card-title{font-size:15px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px;}
+    .card-subtitle{font-size:12px;color:var(--muted);}
+    .status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+    .status-badge.on-track{background:var(--success-light);color:var(--success);border:1px solid var(--success-border);}
+    .status-badge.off-track{background:var(--alert-light);color:var(--alert);border:1px solid var(--alert-border);}
+
+    /* SIM */
+    .sim-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:start;}
+    @media(max-width:860px){.sim-grid{grid-template-columns:1fr;}}
+    .slider-group{margin-bottom:20px;}
+    .slider-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+    .slider-label{font-size:12px;font-weight:600;color:var(--text-2);}
+    .slider-baseline{font-size:10.5px;color:var(--subtle);margin-top:1px;}
+    .slider-val{font-size:24px;font-weight:800;color:var(--gold);letter-spacing:-.5px;}
+    input[type=range]{width:100%;height:5px;border-radius:5px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background:linear-gradient(to right,var(--gold-mid) var(--fill,0%),var(--border) var(--fill,0%));}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--surface);border:2.5px solid var(--gold-mid);box-shadow:0 1px 6px rgba(0,0,0,.15);cursor:pointer;transition:transform .1s;}
+    input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15);}
+    .slider-ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--subtle);margin-top:3px;padding:0 1px;}
+    .output-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px;}
+    .output-card{background:var(--bg);border:1px solid var(--border-subtle);border-radius:8px;padding:11px 13px;}
+    .output-card.ok{background:var(--success-light);border-color:var(--success-border);}
+    .output-card.warn{background:var(--alert-light);border-color:var(--alert-border);}
+    .output-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:2px;}
+    .output-value{font-size:22px;font-weight:800;letter-spacing:-.5px;}
+    .output-value.success{color:var(--success);}
+    .output-value.alert{color:var(--alert);}
+    .output-desc{font-size:10.5px;color:var(--muted);margin-top:1px;}
+    .ti-strip{display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;margin-top:14px;padding:14px;background:var(--bg);border-radius:10px;border:1px solid var(--border);}
+    .ti-cell{text-align:center;padding:0 12px;}
+    .ti-sep{background:var(--border);}
+    .ti-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:4px;}
+    .ti-value{font-size:18px;font-weight:800;letter-spacing:-.5px;}
+    .ti-value.success{color:var(--success);}
+    .ti-value.alert{color:var(--alert);}
+    .ti-value.gold{color:var(--gold);}
+    .ti-sub{font-size:10.5px;color:var(--muted);margin-top:2px;}
+    .progress-wrap{margin-top:14px;}
+    .progress-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;}
+    .progress-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
+    .progress-fill{height:100%;border-radius:4px;transition:width .25s ease,background .25s ease;}
+    .insight-box{margin-top:12px;padding:11px 13px;background:var(--gold-light);border:1px solid #E4CE9A;border-radius:8px;font-size:12px;line-height:1.65;color:var(--text-2);}
+    .insight-box strong{color:var(--gold);}
+    .insight-box.success{background:var(--success-light);border-color:var(--success-border);}
+    .insight-box.success strong{color:var(--success);}
+    .alert-box{margin-top:12px;padding:11px 13px;background:var(--alert-light);border:1px solid var(--alert-border);border-radius:8px;font-size:12px;line-height:1.65;color:var(--text-2);}
+    .alert-box strong{color:var(--alert);}
+    .mock-note{margin-top:9px;padding:7px 11px;background:#F0EFF8;border:1px solid #D8D6EC;border-radius:6px;font-size:11px;color:var(--muted);}
+    .chart-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:8px;}
+    .chart-legend{display:flex;gap:16px;margin-top:9px;flex-wrap:wrap;}
+    .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+    .legend-line{width:18px;height:2px;border-radius:2px;}
+
+    /* FUNNEL TAB1 */
+    .funnel-toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+    .target-control{display:flex;align-items:center;gap:7px;}
+    .target-control label{font-size:12px;color:var(--muted);}
+    .target-input{width:80px;font-size:20px;font-weight:800;text-align:center;padding:4px 8px;border:2px solid var(--gold-mid);border-radius:8px;color:var(--gold);background:var(--gold-light);outline:none;}
+    .funnel-info{font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;}
+    .funnel-info strong{color:var(--text-2);}
+
+    /* CLIFF */
+    .cliff-grid{display:grid;grid-template-columns:1fr 200px;gap:22px;align-items:start;}
+    @media(max-width:720px){.cliff-grid{grid-template-columns:1fr;}}
+    .cliff-stats{display:flex;flex-direction:column;gap:10px;}
+    .cliff-stat{background:var(--bg);border:1px solid var(--border-subtle);border-radius:8px;padding:11px 13px;}
+    .cliff-stat.danger{background:var(--alert-light);border-color:var(--alert-border);}
+    .cliff-stat.good{background:var(--success-light);border-color:var(--success-border);}
+    .cliff-stat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:3px;}
+    .cliff-stat-val{font-size:22px;font-weight:800;line-height:1.1;}
+    .cliff-stat-val.danger{color:var(--alert);}
+    .cliff-stat-val.good{color:var(--success);font-size:14px;}
+    .cliff-stat-desc{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;}
+
+    /* TABLES */
+    table{width:100%;border-collapse:collapse;}
+    thead th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+    tbody td{padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border-subtle);vertical-align:middle;}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr.current{background:var(--gold-light);}
+    .conv-tag{font-size:10px;font-weight:700;background:var(--gold-light);color:var(--gold);padding:2px 7px;border-radius:4px;margin-left:5px;border:1px solid #E4CE9A;}
+    .mult-badge{display:inline-block;background:var(--alert-light);color:var(--alert);font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid var(--alert-border);}
+
+    /* FILTER BAR */
+    .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+    .filter-sep{width:1px;height:22px;background:var(--border);margin:0 6px;}
+    .filter-group-label{font-size:10.5px;font-weight:600;color:var(--muted);white-space:nowrap;}
+    .filter-btn{font-size:11.5px;font-weight:500;padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;}
+    .filter-btn:hover{border-color:var(--gold-mid);color:var(--text-2);}
+    .filter-btn.active{background:var(--gold-light);border-color:#E4CE9A;color:var(--gold);font-weight:600;}
+
+    /* VINTAGE BUCKETS */
+    .vintage-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+    @media(max-width:700px){.vintage-row{grid-template-columns:repeat(2,1fr);}}
+    .vintage-card{border-radius:10px;padding:13px 15px;text-align:center;border:1px solid;position:relative;overflow:hidden;}
+    .vintage-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+    .vintage-card.critical{background:var(--alert-light);border-color:var(--alert-border);}
+    .vintage-card.critical::before{background:var(--alert);}
+    .vintage-card.soon{background:var(--hot-light);border-color:var(--hot-border);}
+    .vintage-card.soon::before{background:var(--hot);}
+    .vintage-card.watch{background:var(--warm-light);border-color:var(--warm-border);}
+    .vintage-card.watch::before{background:var(--warm);}
+    .vintage-card.safe{background:var(--success-light);border-color:var(--success-border);}
+    .vintage-card.safe::before{background:var(--success);}
+    .vintage-num{font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-1px;}
+    .vintage-card.critical .vintage-num{color:var(--alert);}
+    .vintage-card.soon .vintage-num{color:var(--hot);}
+    .vintage-card.watch .vintage-num{color:var(--warm);}
+    .vintage-card.safe .vintage-num{color:var(--success);}
+    .vintage-label{font-size:11.5px;font-weight:700;margin-top:4px;}
+    .vintage-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+    /* HEALTH */
+    .health-wrap{display:flex;align-items:center;gap:7px;}
+    .health-bar-track{width:55px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;flex-shrink:0;}
+    .health-bar-fill{height:100%;border-radius:3px;}
+    .health-num{font-size:13px;font-weight:700;width:26px;}
+
+    /* STATUS CHIPS */
+    .status-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;white-space:nowrap;}
+    .status-chip.active{background:var(--success-light);color:var(--success);border:1px solid var(--success-border);}
+    .status-chip.expiring{background:var(--warm-light);color:var(--warm);border:1px solid var(--warm-border);}
+    .status-chip.risk{background:var(--alert-light);color:var(--alert);border:1px solid var(--alert-border);}
+    .status-chip.drop{background:#F0F0F0;color:#666;border:1px solid #DDD;}
+
+    /* LABELS HOT/WARM/COLD */
+    .label-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;white-space:nowrap;}
+    .label-chip.hot{background:var(--hot-light);color:var(--hot);border:1px solid var(--hot-border);}
+    .label-chip.warm{background:var(--warm-light);color:var(--warm);border:1px solid var(--warm-border);}
+    .label-chip.cold{background:var(--cold-light);color:var(--cold);border:1px solid var(--cold-border);}
+
+    /* DAYS LEFT */
+    .days-chip{font-size:12px;font-weight:700;padding:2px 8px;border-radius:8px;}
+    .days-chip.critical{background:var(--alert-light);color:var(--alert);border:1px solid var(--alert-border);}
+    .days-chip.soon{background:var(--hot-light);color:var(--hot);border:1px solid var(--hot-border);}
+    .days-chip.watch{background:var(--warm-light);color:var(--warm);border:1px solid var(--warm-border);}
+    .days-chip.safe{background:var(--success-light);color:var(--success);border:1px solid var(--success-border);}
+
+    /* STAGE CHIP */
+    .stage-chip{font-size:11px;color:var(--text-2);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:2px 8px;white-space:nowrap;}
+
+    /* PIC TAG */
+    .pic-tag{font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 8px;white-space:nowrap;}
+
+    /* PIPELINE CARDS */
+    .pipeline-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+    @media(max-width:640px){.pipeline-row{grid-template-columns:repeat(2,1fr);}}
+    .pipe-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 15px;text-align:center;position:relative;overflow:hidden;}
+    .pipe-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+    .pipe-card.hot::before{background:var(--hot);}
+    .pipe-card.warm::before{background:var(--warm);}
+    .pipe-card.cold::before{background:var(--cold);}
+    .pipe-card.total::before{background:var(--gold-mid);}
+    .pipe-num{font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-1px;}
+    .pipe-card.hot .pipe-num{color:var(--hot);}
+    .pipe-card.warm .pipe-num{color:var(--warm);}
+    .pipe-card.cold .pipe-num{color:var(--cold);}
+    .pipe-card.total .pipe-num{color:var(--gold);}
+    .pipe-label{font-size:12px;font-weight:700;margin-top:4px;}
+    .pipe-sub{font-size:10.5px;color:var(--subtle);margin-top:2px;}
+
+    /* POTENTIAL */
+    .potential-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;}
+    .potential-tag.high{background:var(--success-light);color:var(--success);border:1px solid var(--success-border);}
+    .potential-tag.mid{background:var(--gold-light);color:var(--gold);border:1px solid #E4CE9A;}
+    .potential-tag.low{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+
+    /* NOTES */
+    .notes-cell{font-size:11.5px;color:var(--muted);max-width:190px;line-height:1.4;}
+
+    /* LEAD GRID */
+    .lead-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start;margin-bottom:16px;}
+    @media(max-width:900px){.lead-grid{grid-template-columns:1fr;}}
+
+    /* DISCLAIMER */
+    .disclaimer-box{margin-top:12px;padding:11px 14px;background:#F5F4FB;border:1px solid #D8D5EE;border-radius:8px;font-size:12px;color:#5A5880;line-height:1.7;}
+    .disclaimer-box strong{color:#4040A0;}
+
+    /* TABLE META */
+    .table-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+    .table-count{font-size:12px;color:var(--muted);}
+    .table-count strong{color:var(--text-2);}
+
+    /* PROCESS STEPS (Renewal) */
+    .process-steps{display:flex;align-items:center;gap:2px;}
+    .pstep{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0;}
+    .pstep.done{background:var(--success);color:#fff;}
+    .pstep.current{background:var(--gold-mid);color:#fff;}
+    .pstep.pending{background:var(--border);color:var(--subtle);}
+    .pstep-arr{font-size:9px;color:var(--border);}
+
+    /* OUTCOME BADGE */
+    .outcome-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;}
+    .outcome-badge.renew{background:var(--success-light);color:var(--success);border:1px solid var(--success-border);}
+    .outcome-badge.postpone{background:var(--warm-light);color:var(--warm);border:1px solid var(--warm-border);}
+    .outcome-badge.no{background:var(--alert-light);color:var(--alert);border:1px solid var(--alert-border);}
+    .outcome-badge.pending{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+
+    /* SUMMARY FUNNEL */
+    .conv-funnel{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;}
+    @media(max-width:640px){.conv-funnel{grid-template-columns:repeat(2,1fr);}}
+    .funnel-step{text-align:center;padding:14px;background:var(--bg);border-radius:10px;border:1px solid var(--border);}
+    .funnel-step.final{background:var(--success-light);border-color:var(--success-border);}
+    .funnel-step-num{font-size:28px;font-weight:800;line-height:1;}
+    .funnel-step.final .funnel-step-num{color:var(--success);}
+    .funnel-step-label{font-size:11px;color:var(--muted);margin-top:4px;}
+
+    /* ── PRESENTATION POLISH v0.6 ── */
+    @keyframes fadeSlideIn { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+    .tab-panel.active { animation: fadeSlideIn 0.22s ease forwards; }
+    @keyframes popIn { from{opacity:0;transform:scale(.88)} to{opacity:1;transform:scale(1)} }
+    .metric-value { animation: popIn .35s ease; }
+
+    .footer-bar { border-top:1px solid var(--border); padding:12px 28px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--subtle); background:var(--surface); }
+    
+    .demo-banner { background:#F5F4FB; border:1px solid #D8D5EE; border-radius:8px; padding:9px 14px; font-size:11.5px; color:#5A5880; display:flex; align-items:flex-start; gap:8px; line-height:1.65; margin-top:14px; }
+    .demo-banner strong { color:#4040A0; }
+
+    .phase2-card-wrap { background:linear-gradient(135deg,var(--gold-light) 0%,#FAFAF8 100%); border:1px solid #EAD98A; border-radius:12px; padding:20px 24px; margin-bottom:16px; }
+    .phase2-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+    @media(max-width:700px){.phase2-grid{grid-template-columns:repeat(2,1fr);}}
+    .p2-card { background:rgba(255,255,255,.7); border:1.5px dashed #DDD; border-radius:10px; padding:15px; text-align:center; transition:all .18s; cursor:default; }
+    .p2-card:hover { border-color:var(--gold-mid); transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,.07); background:#fff; }
+    .p2-icon { font-size:24px; margin-bottom:7px; }
+    .p2-title { font-size:12px; font-weight:700; color:var(--text-2); margin-bottom:4px; }
+    .p2-desc { font-size:10.5px; color:var(--muted); line-height:1.55; }
+
+    .tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; border-radius:8px; font-size:9px; font-weight:800; padding:0 4px; margin-left:5px; background:var(--alert); color:#fff; vertical-align:middle; line-height:1; }
+
+
+    /* CONFIG MODAL */
+    #config-modal{position:fixed;inset:0;z-index:999;display:none;align-items:flex-start;justify-content:flex-end;}
+    #config-overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);}
+    #config-panel{position:relative;z-index:1;width:520px;max-width:96vw;height:100vh;overflow-y:auto;background:var(--surface);border-left:1px solid var(--border);padding:28px 28px 40px;display:flex;flex-direction:column;gap:0;}
+    #config-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;}
+    #config-close-btn{background:none;border:1px solid var(--border);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:15px;color:var(--muted);display:flex;align-items:center;justify-content:center;}
+    #config-close-btn:hover{background:var(--bg);color:var(--text);}
+    .cfg-section{border:1px solid var(--border-subtle);border-radius:10px;padding:16px 18px;margin-bottom:14px;}
+    .cfg-section-title{font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--text-2);margin-bottom:4px;}
+    .cfg-note{font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5;}
+    .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+    .cfg-grid-3{grid-template-columns:1fr 1fr 1fr;}
+    .cfg-field label{display:block;font-size:10.5px;font-weight:700;color:var(--muted);margin-bottom:4px;letter-spacing:.3px;}
+    .cfg-field input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;color:var(--text);background:var(--bg);outline:none;text-align:right;}
+    .cfg-field input:focus{border-color:var(--gold-mid);background:#fff;}
+    .cfg-field input.small{text-align:center;}
+    #config-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:16px;border-top:1px solid var(--border);}
+    #config-status{font-size:12px;font-weight:600;}
+    #cfg-save-btn{padding:9px 20px;background:var(--gold);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;}
+    #cfg-save-btn:hover{background:#8A6428;}
+    #cfg-save-btn:disabled{opacity:.5;cursor:not-allowed;}
+    #cfg-reset-btn{padding:9px 14px;background:var(--bg);color:var(--text-2);border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;}
+    #cfg-reset-btn:hover{background:var(--alert-light);color:var(--alert);border-color:var(--alert-border);}
+    #config-last-update{font-size:10.5px;color:var(--subtle);margin-top:10px;text-align:right;}
+    #btn-config{padding:5px 12px;background:var(--bg);color:var(--text-2);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;}
+    #btn-config:hover{background:var(--gold-light);border-color:var(--gold-mid);color:var(--gold);}
+
+    /* P&L SECTION */
+    .pl-cost-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:14px;}
+    .pl-cost-row input[type=range]{flex:1;}
+    .pl-cost-num{width:130px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;text-align:right;}
+    .pl-cat-table{width:100%;border-collapse:collapse;margin-bottom:8px;}
+    .pl-cat-table td,th{padding:6px 10px;font-size:12px;text-align:left;}
+    .pl-cat-table th{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+    .pl-cat-table tr:hover td{background:var(--bg);}
+    .pl-cat-input{width:110px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;text-align:right;}
+    .pl-del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;}
+    .pl-del-btn:hover{color:var(--alert);}
+    .pl-add-btn{font-size:11px;padding:5px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text-2);}
+    .pl-add-btn:hover{background:var(--gold-light);border-color:var(--gold-mid);}
+    .metric-card.profit{border-left-color:var(--success);}
+    .metric-card.loss{border-left-color:var(--alert);}
+
+    /* LEAD PROCESS STEPS */
+    .lead-steps{display:flex;align-items:center;gap:2px;flex-wrap:nowrap;}
+    .lstep{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:-.2px;}
+    .lstep.done{background:var(--success);color:#fff;}
+    .lstep.current{background:var(--gold-mid);color:#fff;outline:2px solid var(--gold);outline-offset:1px;}
+    .lstep.pending{background:var(--border);color:var(--muted);}
+    .lstep.paid-out{background:#1C7048;color:#fff;}
+    .lstep.rej{background:var(--alert);color:#fff;}
+    .lstep-arr{color:var(--border);font-size:9px;}
+
+    /* DATE CHIPS */
+    .date-chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap;}
+    .date-chip.fresh{background:var(--hot-light);color:var(--hot);border:1px solid var(--hot-border);}
+    .date-chip.mid{background:var(--warm-light);color:var(--warm);border:1px solid var(--warm-border);}
+    .date-chip.old{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+    .date-chip.na{background:var(--bg);color:var(--subtle);border:1px solid var(--border-subtle);}
+
+    .header-logo { font-size:18px; margin-right:6px; }
+    .header-live { font-size:11px; color:var(--subtle); letter-spacing:.3px; }
+  #login-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center;}
+  #login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;text-align:center;max-width:380px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,.06);}
+  #login-logo{font-size:11.5px;font-weight:800;letter-spacing:2.5px;color:var(--gold);margin-bottom:4px;}
+  #login-sub{font-size:13px;color:var(--muted);margin-bottom:32px;}
+  #btn-signin{width:100%;padding:12px 20px;background:#fff;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .15s,box-shadow .15s;}
+  #btn-signin:hover{border-color:var(--gold);box-shadow:0 2px 8px rgba(160,120,48,.12);}
+  #login-error{display:none;margin-top:16px;padding:10px 14px;background:var(--alert-light);border:1px solid var(--alert-border);border-radius:8px;font-size:12px;color:var(--alert);text-align:left;}
+  #login-hint{margin-top:20px;font-size:11px;color:var(--muted);}
+  #app-wrapper{display:none;}
+  #btn-signout{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 12px;cursor:pointer;transition:border-color .15s;}
+  #btn-signout:hover{border-color:var(--alert);color:var(--alert);}
+  #user-email-badge{font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  </style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div id="login-box">
+    <div id="login-logo">HOW BANGKOK</div>
+    <div id="login-sub">Membership Intelligence Dashboard</div>
+    <button id="btn-signin" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <div id="login-error"></div>
+    <div id="login-hint">เฉพาะ @howbangkok.com เท่านั้น</div>
+  </div>
+</div>
+
+<div id="app-wrapper">
+
+<div class="header">
+  <div style="display:flex;align-items:center;">
+    <span class="header-logo">🏢</span><span class="brand">HOW BANGKOK</span>
+    <div class="brand-sep"></div>
+    <span class="brand-sub">ระบบวิเคราะห์สมาชิก (Membership Intelligence)</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;"><span class="header-live" id="live-clock"></span><span class="header-badge" style="background:var(--gold-light);border-color:#E4CE9A;color:var(--gold);font-weight:700;">Preview · พ.ค. 2569</span><span id="user-email-badge"></span><button id="btn-config" onclick="openConfig()">⚙️ ตั้งค่า</button><button id="btn-signout" onclick="signOut()">Sign out</button></div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('executive',this)">① มุมมองผู้บริหาร</button>
+  <button class="tab-btn" id="tbn-members" onclick="switchTab('members',this)">② สถานะสมาชิก</button>
+  <button class="tab-btn" id="tbn-sales" onclick="switchTab('sales',this)">③ New Sales</button>
+  <button class="tab-btn" id="tbn-renewal" onclick="switchTab('renewal',this)">④ ต่ออายุ / หมดสัญญา</button>
+  <button class="tab-btn" onclick="switchTab('history',this)">⑤ ประวัติสมาชิก</button>
+</div>
+
+<!-- ══════════════════ TAB 1: EXECUTIVE ══════════════════ -->
+<div id="tab-executive" class="tab-panel active">
+<div class="content">
+  <div class="metrics-row metrics-5">
+    <div class="metric-card"><div class="metric-label">สมาชิกที่ใช้งาน (Active Members)</div><div class="metric-value">254</div><div class="metric-sub">ณ พฤษภาคม 2569</div></div>
+    <div class="metric-card gold"><div class="metric-label">เป้าหมาย 2569 (Target)</div><div class="metric-value">+200</div><div class="metric-sub">สมาชิกใหม่ที่ต้องจ่ายเงิน</div></div>
+    <div class="metric-card blue"><div class="metric-label">เพิ่มปีนี้ (Added YTD)</div><div class="metric-value">27</div><div class="metric-sub">ม.ค.–เม.ย. · 13.5% ของเป้า</div></div>
+    <div class="metric-card success"><div class="metric-label">รายได้จอง (Revenue)</div><div class="metric-value">฿20.1M</div><div class="metric-sub">2569 · 53 รายการ</div></div>
+    <div class="metric-card alert"><div class="metric-label">Leads/เดือน (Velocity)</div><div class="metric-value">2.2</div><div class="metric-sub">ราย/เดือน · ⚠ วิกฤต</div></div>
+  </div>
+
+  <div class="deadline-bar">
+    <div class="db-section"><span style="font-size:16px;">📅</span><span class="db-label">ถึงเป้าภายใน (Achieve By)</span>
+      <div style="display:flex;gap:6px;">
+        <select id="dl-month" class="dl-select" onchange="onDeadlineChange()">
+          <option value="5">พ.ค.</option><option value="6">มิ.ย.</option><option value="7">ก.ค.</option>
+          <option value="8">ส.ค.</option><option value="9">ก.ย.</option><option value="10">ต.ค.</option>
+          <option value="11">พ.ย.</option><option value="12" selected>ธ.ค.</option>
+        </select>
+        <select id="dl-year" class="dl-select" onchange="onDeadlineChange()">
+          <option value="2026" selected>2569</option><option value="2027">2570</option>
+        </select>
+      </div>
+    </div>
+    <div class="db-section"><span class="db-label">เดือนที่เหลือ</span><span class="db-val" id="db-months-left">8</span><span class="db-val-unit">เดือน</span></div>
+    <div class="db-section"><span class="db-label">คาดถึงเป้า (ETA)</span><span class="db-val" id="db-eta-val" style="font-size:16px;color:var(--alert);">—</span></div>
+    <div class="db-section" style="border-right:none;"><span id="db-status-chip" class="eta-chip no-data">กำลังคำนวณ...</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div><div class="feature-tag">🎮 Scenario Simulator</div><div class="card-title">ปรับ slider → เห็นผลกระทบ real-time</div><div class="card-subtitle">รวม ETA เทียบ Deadline</div></div>
+      <span id="status-badge" class="status-badge off-track">⚠ ต่ำกว่าเป้า — ขาดอีก 173 คน</span>
+    </div>
+    <div class="sim-grid">
+      <div>
+        <div class="slider-group">
+          <div class="slider-header"><div><div class="slider-label">อัตราแปลงลูกค้า (Conversion Rate)</div><div class="slider-baseline">ปัจจุบัน: 23% (จ่ายแล้ว 3 / สนใจ 13 ราย)</div></div><div class="slider-val" id="conv-val">33%</div></div>
+          <input type="range" id="sl-conv" min="10" max="70" value="23" oninput="runSim()">
+          <div class="slider-ticks"><span>10%</span><span>40%</span><span>70%</span></div>
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><div><div class="slider-label">ลูกค้าสนใจต่อเดือน (Leads/Month)</div><div class="slider-baseline">ปัจจุบัน: 2.2 ราย/เดือน</div></div><div class="slider-val" id="leads-val">2</div></div>
+          <input type="range" id="sl-leads" min="1" max="80" value="2" oninput="runSim()">
+          <div class="slider-ticks"><span>1</span><span>40</span><span>80</span></div>
+        </div>
+        <div class="slider-group">
+          <div class="slider-header"><div><div class="slider-label">อัตราต่ออายุ (Renewal Rate)</div><div class="slider-baseline">ประมาณการ: ~90%</div></div><div class="slider-val" id="renew-val">90%</div></div>
+          <input type="range" id="sl-renew" min="60" max="100" value="90" oninput="runSim()">
+          <div class="slider-ticks"><span>60%</span><span>80%</span><span>100%</span></div>
+        </div>
+        <div class="output-grid">
+          <div class="output-card warn" id="oc-new"><div class="output-label">สมาชิกใหม่ทั้งปี</div><div class="output-value alert" id="ov-new">27</div><div class="output-desc">เป้า: 200 คน</div></div>
+          <div class="output-card"><div class="output-label">รวมปลายปี</div><div class="output-value" id="ov-total">242</div><div class="output-desc">สมาชิก</div></div>
+          <div class="output-card"><div class="output-label">รายได้ใหม่</div><div class="output-value success" id="ov-rev">+฿0M</div><div class="output-desc">จากสมาชิกใหม่</div></div>
+          <div class="output-card"><div class="output-label">ไม่ต่ออายุ (Churn)</div><div class="output-value alert" id="ov-churn">13</div><div class="output-desc">สมาชิก</div></div>
+        </div>
+        <div class="ti-strip">
+          <div class="ti-cell"><div class="ti-label">คาดถึงเป้า (ETA)</div><div class="ti-value alert" id="ti-eta">—</div><div class="ti-sub" id="ti-eta-sub">ปรับ slider เพื่อดูผล</div></div>
+          <div class="ti-sep"></div>
+          <div class="ti-cell"><div class="ti-label">เส้นตาย (Deadline)</div><div class="ti-value gold" id="ti-deadline">ธ.ค. 2569</div><div class="ti-sub" id="ti-deadline-sub">เหลือ 8 เดือน</div></div>
+          <div class="ti-sep"></div>
+          <div class="ti-cell"><div class="ti-label">ทันเวลา? (On Time?)</div><div class="ti-value" id="ti-status" style="font-size:14px;">—</div><div class="ti-sub" id="ti-status-sub"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-row"><span>ความคืบหน้าสู่เป้า +200 คน</span><span id="prog-label" style="font-weight:600;">13.5%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:13.5%;background:var(--alert);"></div></div>
+        </div>
+        <div class="insight-box" id="sim-insight">ที่อัตราแปลง <strong>33%</strong> + leads <strong>2 ราย/เดือน</strong> → ปลายปีได้ <strong>27 คน</strong> ขาดอีก <strong>173 คน</strong></div>
+        <div class="demo-banner">🔹 <strong>Demo:</strong> Renewal Rate = ประมาณการ 90% · ต้องการข้อมูลย้อนหลังจริงก่อน deploy</div>
+      </div>
+      <div>
+        <div class="chart-label">สมาชิกใหม่สะสม — 2569 (คาดการณ์ vs เป้าหมาย)</div>
+        <canvas id="sim-chart"></canvas>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-line" style="background:var(--gold-mid);"></div><span>คาดการณ์</span></div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--alert);opacity:.6;"></div><span>เป้าหมาย</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div><div class="feature-tag">🎯 Reverse Funnel</div><div class="card-title">Target Calculator</div><div class="card-subtitle">กำหนดเป้า → ต้องหา leads กี่รายต่อเดือน</div></div></div>
+    <div class="funnel-toolbar">
+      <div class="target-control"><label>เป้าหมาย</label><input type="number" id="target-in" class="target-input" value="200" min="10" max="9999" oninput="buildFunnel()"><span style="font-size:12px;color:var(--muted);">สมาชิกใหม่</span></div>
+      <div class="funnel-info">📅 Deadline: <strong id="funnel-dl-label">ธ.ค. 2569</strong> &nbsp;·&nbsp; เหลือ <strong id="funnel-mo-left">8</strong> เดือน</div>
+    </div>
+    <div style="overflow-x:auto;"><table><thead><tr><th>อัตราแปลง</th><th>Leads ที่ต้องการ</th><th>ต่อเดือน</th><th>เทียบปัจจุบัน</th><th>Touchpoints</th></tr></thead><tbody id="funnel-body"></tbody></table></div>
+    <div class="alert-box" id="funnel-alert"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div><div class="feature-tag alert">🚨 Risk Alert</div><div class="card-title">Renewal Cliff — หมดอายุแต่ละเดือน</div><div class="card-subtitle">124 จาก 254 คน = 49% ของฐาน</div></div></div>
+    <div class="cliff-grid">
+      <div><canvas id="cliff-chart" height="220"></canvas></div>
+      <div class="cliff-stats">
+        <div class="cliff-stat danger"><div class="cliff-stat-label">⚠ วิกฤต ธ.ค. (Dec Cliff)</div><div class="cliff-stat-val danger">61</div><div class="cliff-stat-desc">สมาชิกหมดอายุ = 24% ของทั้งหมด</div></div>
+        <div class="cliff-stat"><div class="cliff-stat-label">เสี่ยง 10% churn</div><div class="cliff-stat-val" style="font-size:15px;color:var(--alert);font-weight:800;">−6 คน · ฿2.5M เสี่ยงสูญ</div></div>
+        <div class="cliff-stat good"><div class="cliff-stat-label">✓ เวลาแนะนำ (Action)</div><div class="cliff-stat-val good">เริ่ม ก.ย. 2569</div><div class="cliff-stat-desc">ต่ออายุล่วงหน้า 90 วัน</div></div>
+        
+      </div>
+    </div>
+  </div>
+  <!-- PHASE 2 TEASER -->
+  <div class="phase2-card-wrap">
+    <div class="card-header" style="margin-bottom:10px;">
+      <div>
+        <div class="feature-tag blue">🔮 Phase 2 — ระบบเต็มรูปแบบ</div>
+        <div class="card-title">ข้อมูลเชื่อมกันจริง → ทีมทำงานร่วมกันได้</div>
+        <div class="card-subtitle">จาก dashboard อ่านข้อมูล → ระบบที่ทีมอัปเดตและวิเคราะห์ได้ live</div>
+      </div>
+    </div>
+    <div class="phase2-grid">
+      <div class="p2-card"><div class="p2-icon">📱</div><div class="p2-title">Sales CRM Lite</div><div class="p2-desc">Update stage, note, ส่งไม้ต่อ — ทุกคนเห็น real-time ไม่มีข้อมูลหายกับ PIC</div></div>
+      <div class="p2-card"><div class="p2-icon">🏃</div><div class="p2-title">Member Check-in จริง</div><div class="p2-desc">iPad scan ที่ reception หรือ import รายสัปดาห์ → Engagement ขึ้น dashboard อัตโนมัติ</div></div>
+      <div class="p2-card"><div class="p2-icon">🔔</div><div class="p2-title">Auto Alert</div><div class="p2-desc">แจ้งเตือน LINE / Email อัตโนมัติเมื่อสมาชิกเข้า Critical Zone หรือ lead ค้างนาน</div></div>
+      <div class="p2-card"><div class="p2-icon">💰</div><div class="p2-title">Payment Tracking</div><div class="p2-desc">Invoice, วันที่จ่าย, pattern จ่ายช้า → predict churn ได้ก่อนหมดสัญญา</div></div>
+      <div class="p2-card"><div class="p2-icon">🏷</div><div class="p2-title">Smart Tagging</div><div class="p2-desc">Tag สมาชิกและ lead ได้ตาม segment จริง เช่น VIP, price-sensitive, ambassador</div></div>
+      <div class="p2-card"><div class="p2-icon">📊</div><div class="p2-title">Live Data</div><div class="p2-desc">ทุก metric อัปเดต real-time จาก Supabase — ไม่มี Excel ส่งต่อกันอีก</div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════ TAB 2: MEMBER STATUS ══════════════════ -->
+<div id="tab-members" class="tab-panel">
+<div class="content">
+  <div class="metrics-row metrics-4">
+    <div class="metric-card success"><div class="metric-label">Active Members</div><div class="metric-value">254</div><div class="metric-sub">ณ พ.ค. 2569</div></div>
+    <div class="metric-card alert"><div class="metric-label">เหลือ &lt;30 วัน (Critical)</div><div class="metric-value" id="vc-critical">—</div><div class="metric-sub">ต้องติดต่อทันที</div></div>
+    <div class="metric-card gold"><div class="metric-label">เหลือ 30–90 วัน (Soon)</div><div class="metric-value" id="vc-soon">—</div><div class="metric-sub">เริ่ม process ได้เลย</div></div>
+    <div class="metric-card blue"><div class="metric-label">Health Score เฉลี่ย</div><div class="metric-value">68</div><div class="metric-sub">จาก 100</div></div>
+  </div>
+
+  <!-- P&L MONTHLY INTELLIGENCE -->
+  <div class="card" id="pl-section">
+    <div class="card-header" style="flex-wrap:wrap;gap:10px;">
+      <div>
+        <div class="feature-tag success">💰 P&L Monthly Intelligence</div>
+        <div class="card-title">รายได้ Paid Members vs ค่าใช้จ่าย</div>
+        <div class="card-subtitle">คำนวณจาก annual fee ÷ 12 · 194 Paid Members (Renew + Fellow + Distinguish)</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span class="filter-group-label">คชจ:</span>
+        <button class="filter-btn active" id="plm-simple" onclick="setPLMode('simple',this)">Simple</button>
+        <button class="filter-btn" id="plm-cat" onclick="setPLMode('cat',this)">Categories</button>
+      </div>
+    </div>
+    <div class="metrics-row metrics-5" style="margin-bottom:14px;">
+      <div class="metric-card success">
+        <div class="metric-label">💳 Paid Members</div>
+        <div class="metric-value">194</div>
+        <div class="metric-sub">Renew 78 · Fellow 75 · Dist 41</div>
+      </div>
+      <div class="metric-card gold">
+        <div class="metric-label">📈 รายได้/เดือน</div>
+        <div class="metric-value" id="pl-rev-val">฿6.14M</div>
+        <div class="metric-sub" id="pl-rev-sub">194 × ฿380k ÷ 12</div>
+      </div>
+      <div class="metric-card alert">
+        <div class="metric-label">⚠️ รายได้เสี่ยงหาย</div>
+        <div class="metric-value" id="pl-risk-val">—</div>
+        <div class="metric-sub" id="pl-risk-sub">จากสมาชิกหมด &lt;30 วัน</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">📉 คชจ/เดือน</div>
+        <div class="metric-value" id="pl-cost-disp">฿5.00M</div>
+        <div class="metric-sub">ปรับได้ด้านล่าง</div>
+      </div>
+      <div class="metric-card" id="pl-net-card">
+        <div class="metric-label">💡 กำไร / ขาดทุน</div>
+        <div class="metric-value" id="pl-net-val">+฿1.14M</div>
+        <div class="metric-sub" id="pl-net-sub">เดือนนี้</div>
+      </div>
+    </div>
+    <!-- Simple mode -->
+    <div id="pl-mode-simple">
+      <div class="pl-cost-row">
+        <span style="font-size:12px;font-weight:600;color:var(--text-2);white-space:nowrap;">คชจ รวม/เดือน (฿)</span>
+        <input type="range" id="pl-slider" min="500000" max="15000000" step="100000" value="5000000" oninput="onPLSlider()">
+        <input type="number" class="pl-cost-num" id="pl-cost-input" value="5000000" step="100000" oninput="onPLInput()">
+      </div>
+    </div>
+    <!-- Category mode -->
+    <div id="pl-mode-cat" style="display:none;">
+      <table class="pl-cat-table">
+        <thead><tr><th>หมวดหมู่</th><th style="text-align:right;">฿/เดือน</th><th></th></tr></thead>
+        <tbody id="pl-cat-body"></tbody>
+        <tfoot><tr>
+          <td style="font-weight:700;padding-top:8px;">รวม</td>
+          <td style="font-weight:800;font-size:14px;color:var(--alert);text-align:right;padding-top:8px;" id="pl-cat-total">฿5,000,000</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+      <button class="pl-add-btn" onclick="addPLCat()">+ เพิ่มหมวดหมู่</button>
+    </div>
+    <!-- Forecast chart -->
+    <div class="chart-label" style="margin-top:16px;">📊 Forecast 6 เดือน — รายได้ (Paid Members) vs คชจ</div>
+    <canvas id="pl-chart" height="180"></canvas>
+    <div class="demo-banner" style="margin-top:12px;">📊 <strong>Forecast:</strong> คำนวณจากสมาชิกจริงที่หมดอายุแต่ละเดือน · สมมติ Renewal Rate 85% · สมาชิกที่ไม่ต่อ = รายได้หายถาวร · ค่าใช้จ่ายปรับได้จาก slider</div>
+  </div>
+
+  <!-- Vintage Buckets -->
+  <div class="card">
+    <div class="card-header"><div><div class="feature-tag">⏳ Vintage — เวลาที่เหลือก่อนหมดอายุ</div><div class="card-title">แบ่งกลุ่มตามเวลาที่เหลือก่อนหมดอายุ</div><div class="card-subtitle">ยิ่งเหลือน้อย = ยิ่งเร่งด่วน</div></div></div>
+    <div class="vintage-row" id="vintage-summary"></div>
+    <div class="demo-banner">🔹 <strong>Demo data:</strong> แสดง 15 ตัวอย่างจาก 254 สมาชิก · Vintage คำนวณจากวันหมดอายุ · ระบบจริงดึงข้อมูลจาก Firestore อัตโนมัติ</div>
+  </div>
+
+  <!-- Member Table -->
+  <div class="card">
+    <div class="card-header"><div><div class="feature-tag">👥 Member Directory</div><div class="card-title">รายชื่อสมาชิกทั้งหมด</div><div class="card-subtitle">ชื่อเล่น · ประเภท · ราคา/ปี · Vintage (วันที่เหลือ) · กรองได้ตามประเภทและ Vintage</div></div></div>
+    <div class="filter-bar">
+      <span class="filter-group-label">Vintage (เหลือ):</span>
+      <button class="filter-btn active" onclick="setFilter('vintage','all',this)">ทั้งหมด</button>
+      <button class="filter-btn" onclick="setFilter('vintage','critical',this)">🔴 &lt;30 วัน</button>
+      <button class="filter-btn" onclick="setFilter('vintage','soon',this)">🟠 30-90 วัน</button>
+      <button class="filter-btn" onclick="setFilter('vintage','watch',this)">🟡 90-180 วัน</button>
+      <button class="filter-btn" onclick="setFilter('vintage','safe',this)">🟢 180+ วัน</button>
+      <div class="filter-sep"></div>
+      <span class="filter-group-label">ประเภท:</span>
+      <button class="filter-btn active" onclick="setFilter('mtype','all',this)">ทั้งหมด</button>
+      <button class="filter-btn" onclick="setFilter('mtype','Renew',this)" style="color:#1C7048;">Renew</button>
+      <button class="filter-btn" onclick="setFilter('mtype','Fellow',this)" style="color:#3B5BDB;">Fellow</button>
+      <button class="filter-btn" onclick="setFilter('mtype','Distinguish',this)" style="color:#C49A3C;">Distinguish</button>
+      <button class="filter-btn" onclick="setFilter('mtype','Invitation',this)">Invitation</button>
+      <button class="filter-btn" onclick="setFilter('mtype','Barter',this)">Barter</button>
+      <div class="filter-sep"></div>
+      <span class="filter-group-label">สถานะ:</span>
+      <button class="filter-btn active" onclick="setFilter('mstatus','all',this)">ทั้งหมด</button>
+      <button class="filter-btn" onclick="setFilter('mstatus','active',this)">🟢 Active</button>
+      <button class="filter-btn" onclick="setFilter('mstatus','expiring',this)">🟠 Expiring</button>
+      <button class="filter-btn" onclick="setFilter('mstatus','risk',this)">🔴 &lt;30 วัน</button>
+    </div>
+    <div class="table-meta">
+      <span class="table-count">แสดง <strong id="member-count">254</strong> จาก 254 สมาชิก (ข้อมูลจริง)</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table><thead><tr>
+        <th>ชื่อเล่น / ชื่อจริง</th><th>ประเภท</th>
+        <th>ราคา/ปี</th>
+        <th>Vintage (เหลือ)</th>
+      </tr></thead><tbody id="member-body"></tbody></table>
+    </div>
+    
+  </div>
+
+  <!-- Health Legend -->
+  <div class="card">
+    <div class="card-header"><div><div class="feature-tag blue">💎 Member Health Score</div><div class="card-title">คะแนนสุขภาพสมาชิก 0–100</div><div class="card-subtitle">สะท้อน engagement + ความเสี่ยงไม่ต่ออายุ</div></div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+      <div style="background:var(--success-light);border:1px solid var(--success-border);border-radius:10px;padding:16px;">
+        <div style="font-size:20px;font-weight:800;color:var(--success);">🟢 70–100</div>
+        <div style="font-size:12px;font-weight:700;color:var(--success);margin-top:4px;">สุขภาพดี (Healthy)</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6;">ใช้บริการบ่อย · อยู่มานาน → ดูแลต่อ + Upsell</div>
+      </div>
+      <div style="background:var(--warm-light);border:1px solid var(--warm-border);border-radius:10px;padding:16px;">
+        <div style="font-size:20px;font-weight:800;color:var(--warm);">🟡 40–69</div>
+        <div style="font-size:12px;font-weight:700;color:var(--warm);margin-top:4px;">ต้องดูแล (Monitor)</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6;">ใช้บริการปานกลาง → เพิ่ม touchpoint</div>
+      </div>
+      <div style="background:var(--alert-light);border:1px solid var(--alert-border);border-radius:10px;padding:16px;">
+        <div style="font-size:20px;font-weight:800;color:var(--alert);">🔴 0–39</div>
+        <div style="font-size:12px;font-weight:700;color:var(--alert);margin-top:4px;">เสี่ยงสูง (At Risk)</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6;">ใช้บริการน้อยมาก → รีบติดต่อก่อนหมดอายุ</div>
+      </div>
+    </div>
+    <div class="disclaimer-box" style="margin-top:14px;">
+      <strong>📌 Formula Health Score ยังอยู่ระหว่างออกแบบ</strong> — ต้องการข้อมูล check-in จริง + Vintage + Engagement ขอยืนยัน logic กับพี่เปิ้ลก่อน deploy จริง
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════ TAB 3: NEW SALES CONVERSION ══════════════════ -->
+<div id="tab-sales" class="tab-panel">
+<div class="content">
+  <div class="pipeline-row">
+    <div class="pipe-card hot"><div class="pipe-num" id="pipe-hot">2</div><div class="pipe-label">🔴 Hot</div><div class="pipe-sub">รีบปิด — เพิ่งเข้ามา</div></div>
+    <div class="pipe-card warm"><div class="pipe-num" id="pipe-warm">4</div><div class="pipe-label">🟡 Warm</div><div class="pipe-sub">กำลัง nurture</div></div>
+    <div class="pipe-card cold"><div class="pipe-num" id="pipe-cold">3</div><div class="pipe-label">🔵 Cold</div><div class="pipe-sub">ผลัดหรือเงียบ</div></div>
+    <div class="pipe-card total"><div class="pipe-num">9</div><div class="pipe-label">📋 Leads ทั้งหมด</div><div class="pipe-sub">YTD ม.ค.–เม.ย. 2569</div></div>
+  </div>
+
+  <div class="lead-grid">
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header"><div><div class="feature-tag">🎯 Lead Pipeline</div><div class="card-title">รายชื่อ Leads (ทุก Stage)</div><div class="card-subtitle">10 stages · Label · PIC · Source · Notes</div></div></div>
+      <div class="filter-bar" style="margin-bottom:12px;">
+        <span class="filter-group-label">Label:</span>
+        <button class="filter-btn active" onclick="setLeadFilter('label','all',this)">ทั้งหมด</button>
+        <button class="filter-btn" onclick="setLeadFilter('label','hot',this)">🔴 Hot</button>
+        <button class="filter-btn" onclick="setLeadFilter('label','warm',this)">🟡 Warm</button>
+        <button class="filter-btn" onclick="setLeadFilter('label','cold',this)">🔵 Cold</button>
+        <div class="filter-sep"></div>
+        <span class="filter-group-label">Source:</span>
+        <button class="filter-btn active" onclick="setLeadFilter('source','all',this)">ทั้งหมด</button>
+        <button class="filter-btn" onclick="setLeadFilter('source','Refer',this)">Refer</button>
+        <button class="filter-btn" onclick="setLeadFilter('source','FB Ad',this)">FB Ad</button>
+        <button class="filter-btn" onclick="setLeadFilter('source','Walk-in',this)">Walk-in</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table><thead><tr><th>ชื่อ / บริษัท</th><th>Process</th><th>Label</th><th>PIC</th><th>🗓 วันแรก</th><th>📞 ล่าสุด</th><th>Source</th><th>Notes</th></tr></thead>
+        <tbody id="lead-body"></tbody></table>
+      </div>
+      <div class="disclaimer-box" style="margin-top:12px;">
+        <strong>⚠ Auto-Label Placeholder Logic:</strong> Hot = ≤14 วัน · Warm = 15–60 วัน · Cold = &gt;60 วัน หรือผลัด ≥2 ครั้ง<br>
+        <strong>ต้องยืนยัน logic จริงกับพี่เปิ้ล</strong> — อาจมีมิติเพิ่ม เช่น ขนาดดีล, ประวัติการตอบ
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header"><div><div class="feature-tag">🌊 Pipeline Stages</div><div class="card-title">10 Stage Flow</div><div class="card-subtitle">จำนวน leads ในแต่ละ stage</div></div></div>
+      <canvas id="stage-chart" height="260"></canvas>
+      <div style="margin-top:16px;">
+        <div class="card-title" style="font-size:13px;margin-bottom:10px;">Lead Source</div>
+        <canvas id="source-chart" height="150"></canvas>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- Monthly Summary -->
+  <div class="card" style="margin-top:0;">
+    <div class="card-header">
+      <div><div class="feature-tag">📊 Monthly Summary</div><div class="card-title">New Sales Conversion — YTD 2569</div><div class="card-subtitle">Lead in (A) → In Process (B) → Convert / Reject</div></div>
+      <span class="status-badge off-track">⚠ Volume ต่ำ — 13 leads, 3 On-board ม.ค.–เม.ย. 2569</span>
+    </div>
+    <div class="conv-funnel">
+      <div class="funnel-step"><div class="funnel-step-num" style="color:var(--blue);">13</div><div class="funnel-step-label">Lead In (A)</div></div>
+      <div class="funnel-step"><div class="funnel-step-num" style="color:var(--gold);">9</div><div class="funnel-step-label">Active (In Process)</div></div>
+      <div class="funnel-step"><div class="funnel-step-num" style="color:var(--alert);">4</div><div class="funnel-step-label">Considering</div></div>
+      <div class="funnel-step final"><div class="funnel-step-num">3</div><div class="funnel-step-label">✓ On-board (Paid)</div></div>
+    </div>
+    <div class="alert-box" style="margin-top:14px;">
+      <strong>🚨 ปัญหาหลัก: Volume ไม่พอ ไม่ใช่ Conversion Rate</strong><br>
+      Conversion 23% (3 จาก 13) · Leads เพียง 3.3 ราย/เดือน · ต้องเพิ่ม Lead Generation อย่างน้อย <strong>6–10x</strong>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════ TAB 4: RENEWAL / หมดสัญญา ══════════════════ -->
+<div id="tab-renewal" class="tab-panel">
+<div class="content">
+
+  <div class="metrics-row metrics-5">
+    <div class="metric-card alert"><div class="metric-label">🔴 วิกฤต &lt;30 วัน (Hot)</div><div class="metric-value" id="rw-hot">3</div><div class="metric-sub">ต้องติดต่อทันที</div></div>
+    <div class="metric-card gold"><div class="metric-label">🟡 ใกล้ 30-90 วัน (Warm)</div><div class="metric-value" id="rw-warm">4</div><div class="metric-sub">เริ่ม process ได้เลย</div></div>
+    <div class="metric-card success"><div class="metric-label">✅ ต่ออายุแล้ว (Renewed)</div><div class="metric-value">1</div><div class="metric-sub">เดือนนี้</div></div>
+    <div class="metric-card blue"><div class="metric-label">Renew Rate (เม.ย.)</div><div class="metric-value">83%</div><div class="metric-sub">5 จาก 6 คน</div></div>
+    <div class="metric-card hot"><div class="metric-label">⚠️ หมดแล้ว ≤30 วัน</div><div class="metric-value" id="rw-expired">—</div><div class="metric-sub">ยังไม่ต่ออายุ</div></div>
+  </div>
+
+  <!-- Renewal Table -->
+  <div class="card">
+    <div class="card-header">
+      <div><div class="feature-tag alert">🔄 ต่ออายุ / หมดสัญญา — Renewal Management</div><div class="card-title">Expiring Members → Renewal Process</div><div class="card-subtitle">Email → Line Info → Talk → QT → Billing → Payment</div></div>
+    </div>
+    <div class="filter-bar" style="margin-bottom:12px;">
+      <span class="filter-group-label">Renewal Label:</span>
+      <button class="filter-btn active" onclick="setRenewFilter('label','all',this)">ทั้งหมด</button>
+      <button class="filter-btn" onclick="setRenewFilter('label','hot',this)">🔴 Hot (&lt;30 วัน)</button>
+      <button class="filter-btn" onclick="setRenewFilter('label','warm',this)">🟡 Warm (30-90 วัน)</button>
+      <button class="filter-btn" onclick="setRenewFilter('label','cold',this)">🔵 Cold (90+ วัน)</button>
+      <div class="filter-sep"></div>
+      <button class="filter-btn active" onclick="setRenewFilter('outcome','all',this)">ทุก Outcome</button>
+      <button class="filter-btn" onclick="setRenewFilter('outcome','pending',this)">⏳ กำลังดำเนิน</button>
+      <button class="filter-btn" onclick="setRenewFilter('outcome','renew',this)">✅ ต่ออายุแล้ว</button>
+      <button class="filter-btn" onclick="setRenewFilter('outcome','postpone',this)">⏸ เลื่อน</button>
+      <button class="filter-btn" onclick="setRenewFilter('outcome','no',this)">❌ ไม่ต่อ</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table><thead><tr>
+        <th>ชื่อ / บริษัท</th><th>Owner (PIC)</th><th>Label</th>
+        <th>เหลือ (Days)</th><th>ที่นั่ง</th>
+        <th>Process Progress</th><th>Stage ปัจจุบัน</th>
+        <th>Outcome</th><th>Notes</th>
+      </tr></thead><tbody id="renewal-body"></tbody></table>
+    </div>
+    <div class="disclaimer-box" style="margin-top:14px;">
+      <strong>📌 Renewal Label Logic (Placeholder):</strong> Hot = เหลือ &lt;30 วัน · Warm = 30–90 วัน · Cold = 90+ วัน<br>
+      Process: 📧 Email → 📱 Line Info → 💬 Talk → 📋 QT → 💰 Billing → ✅ Payment<br>
+      <strong>ต้องยืนยัน logic + ขั้นตอนจริงกับพี่เปิ้ลก่อน deploy</strong>
+    </div>
+    
+  </div>
+
+  <!-- Expired Members Section -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="feature-tag alert" style="background:var(--alert-light);color:var(--alert);border-color:var(--alert-border);">⚠️ หมดอายุแล้ว — ยังไม่ต่อ</div>
+        <div class="card-title">Expired Members — ติดตาม Follow Up</div>
+        <div class="card-subtitle">สมาชิกที่หมดสัญญาแล้ว เผื่อหลุดประเด็น / ดูว่า follow ถึงไหนแล้ว</div>
+      </div>
+      <span id="expired-count-badge" style="font-size:12px;font-weight:700;background:var(--alert-light);color:var(--alert);border:1px solid var(--alert-border);border-radius:20px;padding:4px 12px;"></span>
+    </div>
+    <div class="filter-bar" style="margin-bottom:12px;">
+      <span class="filter-group-label">หมดไปแล้วไม่เกิน:</span>
+      <button class="filter-btn expired-filter-btn active" onclick="setExpiredWindow(30,this)">30 วัน</button>
+      <button class="filter-btn expired-filter-btn" onclick="setExpiredWindow(45,this)">45 วัน</button>
+      <button class="filter-btn expired-filter-btn" onclick="setExpiredWindow(60,this)">60 วัน</button>
+      <button class="filter-btn expired-filter-btn" onclick="setExpiredWindow(90,this)">90 วัน</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table><thead><tr>
+        <th>ชื่อ / บริษัท</th>
+        <th>หมดไปแล้ว</th>
+        <th>วันหมดอายุ</th>
+        <th>Owner (PIC)</th>
+        <th>Notes / Follow Up</th>
+      </tr></thead><tbody id="expired-body"></tbody></table>
+    </div>
+  </div>
+
+  <!-- Renew Rate Chart -->
+  <div class="card">
+    <div class="card-header"><div><div class="feature-tag success">📈 Renewal Rate รายเดือน</div><div class="card-title">% สมาชิกที่ต่ออายุ (ต่อเดือน)</div><div class="card-subtitle">เป้า: รักษา Renew Rate ≥ 90%</div></div></div>
+    <canvas id="renew-rate-chart" height="180"></canvas>
+    
+  </div>
+
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// DATA
+// ══════════════════════════════════════
+const D = {
+  active:254, target:200, ytd:27,
+  leadsBase:2.2, fee:420000, revenue:20086280, totalExpiring:124,
+  expiry:[{m:'พ.ค.',n:24},{m:'มิ.ย.',n:16},{m:'ก.ค.',n:9},{m:'ส.ค.',n:10},{m:'ก.ย.',n:4},{m:'ต.ค.',n:1},{m:'พ.ย.',n:0},{m:'ธ.ค.',n:61}],
+};
+
+// MEMBERS (15 sample) — daysLeft = เหลืออีกกี่วันก่อนหมดอายุ
+const MEMBERS = [
+  {nickname:"เชลซี",fullname:"nan",type:"Renew",price:0,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:true},
+  {nickname:"อาร์ต",fullname:"วุทธิพัฒน์ วิศาลศักดิ์",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:true},
+  {nickname:"วิน",fullname:"กวิน กลองกระโทก",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"กุ๊ก",fullname:"ธารินทร์ จงประเจิด",type:"Barter",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"พี",fullname:"พีระ พีระมาน",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ยนต์",fullname:"ประเสริฐ ตันพิบูลศักดิ์",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"พอล",fullname:"ธนชัย สัจจเทพ",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"บี",fullname:"คงเกียรติ ฉัตรหิรัญทรัพย์",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"เบรน",fullname:"ธนัชชา เฮงตระกูล",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"ไบร์ท",fullname:"ธนวัต เฮงตระกูล",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"นิน",fullname:"ญาณิน พิศาลวาเลิศ",type:"Renew",price:350000,daysLeft:57,endDate:"2026-06-30",status:"expiring",inferred:false},
+  {nickname:"กอล์ฟ",fullname:"วรเทพ ศิริรัตน์อัสดร",type:"Renew",price:350000,daysLeft:1,endDate:"2026-05-05",status:"risk",inferred:false},
+  {nickname:"เพชร",fullname:"บุญญาภาณ์ิ เบญจรงคกุล",type:"Fellow",price:350000,daysLeft:12,endDate:"2026-05-16",status:"risk",inferred:false},
+  {nickname:"อูม",fullname:"ฐานิดา รัถยาพิมล",type:"Renew",price:350000,daysLeft:14,endDate:"2026-05-18",status:"risk",inferred:false},
+  {nickname:"มะปราง",fullname:"มนปวรรณ เพชรวราธร",type:"Fellow",price:350000,daysLeft:14,endDate:"2026-05-18",status:"risk",inferred:false},
+  {nickname:"อ้วน",fullname:"วโรดม วีระภุชงค์",type:"Fellow",price:350000,daysLeft:17,endDate:"2026-05-21",status:"risk",inferred:false},
+  {nickname:"มาร์ค",fullname:"ศิวกร มหาสันทนะ",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"แม๊ก",fullname:"ณัฐเศรษฐ์ ไตรทิพย์เจริญชัย",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"แนน",fullname:"รัชชต เศรษฐ์วรเดช",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"มีมี่",fullname:"อลิสา จีรภิญญาภัฎ",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"แหม่ม",fullname:"รุ่งนภา ทองกู้เกียรติกูล",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"โจ",fullname:"ไตรเทพ ศรีกาลรา",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"แกล็ด",fullname:"สาวิตรี สุรธรรมวิทย์",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"จ๋า",fullname:"ทิพย์รัตน์ สิทธิมนต์อำนวย",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"ป็อป",fullname:"โชติวัฒน์ พรโชติทวีรัตน์",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"เต้ย",fullname:"ทีฆภัค ศรียุกต์วงศ์",type:"Renew",price:325000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"บอนด์",fullname:"อนิวรรต ศรีรุ่งธรรม",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"ปอย",fullname:"ณพน เจนธรรมนุกูล",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"อุ้ม",fullname:"สมบัติ งามเฉลิมศักดิ์",type:"Renew",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"ตูน",fullname:"กชพร ตั้งไตรธรรม",type:"Fellow",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"นัน",fullname:"รัชนัน เรืองชัยวงศ์",type:"Fellow",price:350000,daysLeft:57,endDate:"2026-06-30",status:"expiring",inferred:false},
+  {nickname:"บอย",fullname:"ภวินท์ คุณาดิเรกวงศ์",type:"Fellow",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"ขำขำ",fullname:"ทศพร ธรรมธนวณิช",type:"Fellow",price:350000,daysLeft:27,endDate:"2026-05-31",status:"risk",inferred:false},
+  {nickname:"มีน",fullname:"นีรัมพร จารุมณีโรจน์",type:"Fellow",price:350000,daysLeft:28,endDate:"2026-06-01",status:"risk",inferred:false},
+  {nickname:"ครีม",fullname:"แพรว สาคร",type:"Fellow",price:350000,daysLeft:32,endDate:"2026-06-05",status:"expiring",inferred:false},
+  {nickname:"กอล์ฟ",fullname:"ฤทัยรัตน์ ชีววุฒิพงศ์",type:"Fellow",price:0,daysLeft:34,endDate:"2026-06-07",status:"expiring",inferred:false},
+  {nickname:"นาม",fullname:"สุรนาม พานิชการ",type:"Fellow",price:0,daysLeft:34,endDate:"2026-06-07",status:"expiring",inferred:false},
+  {nickname:"บู้",fullname:"ภคเวศย ทับประยูร์",type:"Renew",price:350000,daysLeft:35,endDate:"2026-06-08",status:"expiring",inferred:false},
+  {nickname:"นัท",fullname:"ณัฐพงษ์ จักรไพศาล",type:"Fellow",price:350000,daysLeft:35,endDate:"2026-06-08",status:"expiring",inferred:false},
+  {nickname:"นุช",fullname:"นงนุช นนทปัทมะดุลย์",type:"Fellow",price:350000,daysLeft:35,endDate:"2026-06-08",status:"expiring",inferred:false},
+  {nickname:"เน้ง",fullname:"ฐิดา หวังดำรงเวศ",type:"Fellow",price:350000,daysLeft:38,endDate:"2026-06-11",status:"expiring",inferred:false},
+  {nickname:"เฟิร์ส",fullname:"ญารัฏฏิการ์ บุญโสมรักษ์",type:"Renew",price:350000,daysLeft:45,endDate:"2026-06-18",status:"expiring",inferred:false},
+  {nickname:"น้ำหวาน",fullname:"ศิดิภา พงศ์แพรวพรรณ",type:"Fellow",price:350000,daysLeft:45,endDate:"2026-06-18",status:"expiring",inferred:false},
+  {nickname:"ตั้ม",fullname:"ปนายุ ศิริกระจ่างศรี",type:"Renew",price:350000,daysLeft:107,endDate:"2026-08-19",status:"active",inferred:false},
+  {nickname:"เมฆ",fullname:"ระดมเลิศ อนันตชินะ",type:"Renew",price:350000,daysLeft:53,endDate:"2026-06-26",status:"expiring",inferred:false},
+  {nickname:"หมวย",fullname:"ดวงพร ลีลาแม้นเทพ",type:"Fellow",price:350000,daysLeft:54,endDate:"2026-06-27",status:"expiring",inferred:false},
+  {nickname:"กิ๊ฟ",fullname:"พราวพิชชา ฉันท์ชนิตชนม์",type:"Fellow",price:350000,daysLeft:56,endDate:"2026-06-29",status:"expiring",inferred:false},
+  {nickname:"แพร",fullname:"เมริกา อภิชนาพงศ์",type:"Renew",price:350000,daysLeft:57,endDate:"2026-06-30",status:"expiring",inferred:false},
+  {nickname:"ไม้ฟืน",fullname:"พะเนียง พงษธา",type:"Renew",price:350000,daysLeft:95,endDate:"2026-08-07",status:"active",inferred:false},
+  {nickname:"คริส",fullname:"ฐิติภัทร์ ยิ้มเศรษฐี",type:"Fellow",price:350000,daysLeft:61,endDate:"2026-07-04",status:"expiring",inferred:false},
+  {nickname:"กึ้ง",fullname:"เฉลิมชัย มหากิจศิริ",type:"Renew",price:350000,daysLeft:68,endDate:"2026-07-11",status:"expiring",inferred:false},
+  {nickname:"กอล์ฟ",fullname:"ธนพล มารัตนะ",type:"Fellow",price:350000,daysLeft:133,endDate:"2026-09-14",status:"active",inferred:false},
+  {nickname:"แนท",fullname:"ไปรยา บุนนาค",type:"Renew",price:350000,daysLeft:82,endDate:"2026-07-25",status:"expiring",inferred:false},
+  {nickname:"ปูน",fullname:"นกรณ์ พฤกษ์พิพัฒน์เมธ",type:"Renew",price:350000,daysLeft:88,endDate:"2026-07-31",status:"expiring",inferred:false},
+  {nickname:"จูน",fullname:"ณัชชา จิรยั่งยืน",type:"Renew",price:350000,daysLeft:88,endDate:"2026-07-31",status:"expiring",inferred:false},
+  {nickname:"ฟร้อน",fullname:"ธัญปภา วัฒนชัยมงคล",type:"Fellow",price:325000,daysLeft:88,endDate:"2026-07-31",status:"expiring",inferred:false},
+  {nickname:"โบว์",fullname:"ประภาพิมพ์ ลิปตพัลลภ",type:"Fellow",price:350000,daysLeft:88,endDate:"2026-07-31",status:"expiring",inferred:false},
+  {nickname:"น้ำ",fullname:"ธนิษฐา จารุแสงไพโรจน์",type:"Fellow",price:350000,daysLeft:88,endDate:"2026-07-31",status:"expiring",inferred:false},
+  {nickname:"เนี๊ยบ",fullname:"นลณภัทร ไพบูลย์",type:"Fellow",price:350000,daysLeft:88,endDate:"2026-07-31",status:"expiring",inferred:false},
+  {nickname:"โร่",fullname:"ภัคเมศฐ์ ศิระอมรรัศม์",type:"Renew",price:0,daysLeft:95,endDate:"2026-08-07",status:"active",inferred:false},
+  {nickname:"แพรว",fullname:"แพรวตา สรสุชาติ",type:"Fellow",price:0,daysLeft:105,endDate:"2026-08-17",status:"active",inferred:false},
+  {nickname:"พลอย",fullname:"ศุภิกา พัฒน์ธนันภู​",type:"Fellow",price:0,daysLeft:112,endDate:"2026-08-24",status:"active",inferred:false},
+  {nickname:"เจส",fullname:"นิธาดา พยัคฆพันธ์",type:"Fellow",price:0,daysLeft:119,endDate:"2026-08-31",status:"active",inferred:false},
+  {nickname:"เปิ้น",fullname:"ปรารถนา ประติธนายุทธิ์",type:"Fellow",price:0,daysLeft:119,endDate:"2026-08-31",status:"active",inferred:false},
+  {nickname:"เก้า",fullname:"ทองเนื้อเก้า คำพิมพ์",type:"Fellow",price:0,daysLeft:119,endDate:"2026-08-31",status:"active",inferred:false},
+  {nickname:"อุ๊ย",fullname:"อาภาพร ฤทัยยานนท์",type:"Fellow",price:0,daysLeft:119,endDate:"2026-08-31",status:"active",inferred:false},
+  {nickname:"จุ๊ฟ",fullname:"รัฐพล ภักดีภูมิ",type:"Fellow",price:0,daysLeft:119,endDate:"2026-08-31",status:"active",inferred:false},
+  {nickname:"ปูน",fullname:"ชญานิน ศรีภพ",type:"Renew",price:0,daysLeft:136,endDate:"2026-09-17",status:"active",inferred:false},
+  {nickname:"เบส",fullname:"กิตติ บุญนิจรอด",type:"Fellow",price:0,daysLeft:149,endDate:"2026-09-30",status:"active",inferred:false},
+  {nickname:"ไมเคิล",fullname:"เกษมศักดิ์ ศิริรักษ์",type:"Fellow",price:0,daysLeft:149,endDate:"2026-09-30",status:"active",inferred:false},
+  {nickname:"แป้ง",fullname:"วิศรา พรกุล",type:"Renew",price:0,daysLeft:151,endDate:"2026-10-02",status:"active",inferred:false},
+  {nickname:"คุณหญิงหน่อย",fullname:"สุดารัตน์ เกยุราพันธุ์",type:"Renew",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ปอม",fullname:"ธัชมาพรรณ จันทร์จำรัสแสง",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"บุ๊ค",fullname:"ภวัฒก์ องค์วาสิฏฐ์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"อัน",fullname:"สุวิทัศท์ สุรสิงห์โตทอง",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ปลา",fullname:"ชยานันท์ คุณาไทย",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เเอ๊ม",fullname:"ศรัณย์ แบ่งกุศลจิต",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พีช",fullname:"ภัทรพงศ์ กีรติภักดีพงศ์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ตง",fullname:"ธเนศ จิระเสวกดิลก",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"บิล",fullname:"William Heinecke",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เต้ สิงห์",fullname:"ภูริต ภิรมย์ภักดี",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เบนซ์",fullname:"วรภัทร ชวนะนิกุล",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"Earth",fullname:"สรณัญช์ ชูฉัตร",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พี่เน่ง",fullname:"รัชนีพร พุคยาภรณ์ พุกกะมาน",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ปั้น",fullname:"บัณฑูร ล่ำซำ",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"บุณยสิทธิ์",fullname:"บุณยสิทธิ์ โชควัฒนา",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"Kirit",fullname:"Kirit Shah",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"แต๋ม",fullname:"ศุภจี สุธรรมพันธุ์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ดร.สุรเกียรติ",fullname:"สุรเกียรติ์ เสถียรไทย",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เคน",fullname:"นครินทร์ วนกิจไพบูลย์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ปิงปอง",fullname:"นิติพัฒน์ สุขสวย",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"โอ๊ต",fullname:"อัครพล จับจิตรใจดล",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"อ้น",fullname:"ปฤณ จำเริญพานิช",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ยาจีน",fullname:"ธนพร เกษตรสุวรรณ",type:"Barter",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"แจน",fullname:"อรวรา เกษตรสุวรรณ",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พี่จิ๋ม",fullname:"สุวภา เจริญยิ่ง",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พี่ตุ้ม",fullname:"สรกล อดุลยานนท์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เชียร์",fullname:"ชินณิชา วงศ์สวัสดิ์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"น้อง",fullname:"กอบกาญจน์ วัฒนวรางกูร",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พีท",fullname:"พีท ลิณญ์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"มาร์ค",fullname:"เมธชนัน สวนศิลป์พงศ์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พี่อู๊ด",fullname:"สิทธิโชค นพชินบุตร",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พี่ปุ่น",fullname:"ศิธา ทิวารี",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ป๋วย",fullname:"ดิสพล จันศิริ",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เตา",fullname:"บรรยง พงษ์พานิช",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ต้นสน",fullname:"สันติธาร เสถียรไทย",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"วู้ดดี้",fullname:"วุฒิธร มิลินทจินดา",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"บอล",fullname:"ภานุวัฒน์ กาญจะโนสถ",type:"Renew",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ลูกคิด",fullname:"ณภัทร จาตุศรีพิทักษ์",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"นาฏ",fullname:"นาฏ ฟองสมุทร",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ป๋อง",fullname:"นิทัศน์ วรพนพิพัฒน์",type:"Renew",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เอ๋",fullname:"วัชรี ศิริเวชวิวัฒน์",type:"Renew",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"ต่อ",fullname:"รัดเกล้า วงษ์ประเสริฐ",type:"Renew",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"ฟ้า",fullname:"วรรณวิพุธ สรรพสิทธิวงศ์",type:"Renew",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เชอรี่",fullname:"ชยาภา วงศ์สวัสดิ์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เปิ้ล",fullname:"อนิสา ชูจันทร์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"อันโทนี",fullname:"อันโทนี ฟรันซิซ เฟอร์นันเดซ",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"บอย",fullname:"ชีวิน โกสิยพงษ์",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ป๊อด",fullname:"ธนชัย อุชชิน",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"นิ",fullname:"นิสา ถังทอง",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"มิก",fullname:"เอมปวีร์ ภัทรอัมพรศักดิ์",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พาย",fullname:"ไพลิน วิชากูล",type:"Fellow",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"เอก",fullname:"ณัฐพันธ์ พรศรีฤทัย",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"โบว์",fullname:"ณชา จึงกานต์กุล",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พลอย",fullname:"มนต์ขวัญ รัตนติกุล",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"หมอโล่ย",fullname:"ชัยรัตน์ ปัณฑุรอัมพร",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"หรั่ง",fullname:"พรพรรณ ด่านประดิษฐ์",type:"Fellow",price:0,daysLeft:290,endDate:"2027-02-18",status:"active",inferred:false},
+  {nickname:"แพร",fullname:"กนกกาญจน์ รินนะจิตต์",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"บิ๊ก",fullname:"ศิวภูมิ เลิศสรรค์ศรัญย์",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"อิ๊ก",fullname:"อุกฤษณ์ ภาควิวรรธ",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"แคลร์",fullname:"กิตติ์ธัญญา ธนาจิระศักดิ์",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เดียร์",fullname:"ดวงวรรณ บุนนาค",type:"Fellow",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"พลอย",fullname:"nan",type:"Barter",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ตูน",fullname:"nan",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"หนึ่ง",fullname:"nan",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"เอ๋ นิ้วกลม",fullname:"nan",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+  {nickname:"ทอม",fullname:"ทรงพล กุลถี",type:"Fellow",price:0,daysLeft:246,endDate:"2027-01-05",status:"active",inferred:false},
+  {nickname:"ลูกเกต",fullname:"ภัคคณา ฉัตรโกเมศ",type:"Renew",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"พงศ์",fullname:"ยุวพงศ์ สุทธินันท์",type:"Fellow",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"แจน",fullname:"เกียรติศักดิ์ วารวิจิตร",type:"Fellow",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"เชษ",fullname:"เชษฐา เทอดไพรสันต์",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"จูน",fullname:"จรีพร จารุกรสกุล",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"เกรซ",fullname:"ชัชมนต์ อนันตประยูร",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"เอก",fullname:"เอกพล ไววิทย์ลิขิต",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"ใหม่",fullname:"ศุภนี ไววิทย์ลิขิต",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"บิ๊ก",fullname:"ชนะโชติ รัตนรุจิกร",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"น้ำตาล",fullname:"นวนุช สกุลคู",type:"Distinguish",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"เหลิม",fullname:"กิติพัฒน์ มลิวัลย์ช่อเพชร",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"สุ",fullname:"สุประวีณ์ มลิวัลย์ช่อเพชร",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"แซต",fullname:"วิชัย กุลสมภพ",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"อู๊ด",fullname:"อัญชลิน พรรณนิภา",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"ตุ๊ก",fullname:"นภัสนันท์ พรรณนิภา",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"เล้ง",fullname:"ศิริวัฒน์ วงศ์จารุกร",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"บอย",fullname:"ทศพร รัตนถาวรกิจ",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"ต้อม",fullname:"จิรัฐ บวรวัฒนะ",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"โรส",fullname:"อรพรรณ มนต์พิชิต บวรวัฒนะ",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"พงศ์ศักดิ์",fullname:"พงศ์ศักดิ์ ธรรมธัชอารี",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"เอ",fullname:"สราวุฒิ อยู่วิทยา",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"นุช",fullname:"นุชรี อยู่วิทยา",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"หนูนา",fullname:"สุวรรณา เอี่ยมพิกุล",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"มีมี่",fullname:"มีนา อัครพงศ์พิศักดิ์",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"ต้น",fullname:"อภิสิทธิ์ อนันตนาถรัตน",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"ลสา",fullname:"ลสา โสภณพนิช",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"โป้ง",fullname:"ปกรณ์ เจียมสกุลทิพย์",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"หมู",fullname:"ณัฐวุฒิ พึงเจริญพงศ์",type:"Distinguish",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"พัช",fullname:"พัสชนันท์ คงวณิชกิจเจริญ",type:"Fellow",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"บี๊",fullname:"นุกูล ลักขณานุกุล",type:"Fellow",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"แคน",fullname:"ทศพรรษ ชุณหรัศมิ์",type:"Fellow",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"ท็อป",fullname:"ณัฐบดินทร์ ไชยศรี",type:"Renew",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"จิน",fullname:"จิณณ์ เผ่าประไพ",type:"Fellow",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"จ๊อบ",fullname:"วรวรรธน์ เตชะมนตรีกุล",type:"Fellow",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"โอ๊ต",fullname:"ปวริศ ดำรงสินสวัสดิ์",type:"Fellow",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"อู๋",fullname:"คุณภฤศธร สกุลไทย",type:"Fellow",price:0,daysLeft:272,endDate:"2027-01-31",status:"active",inferred:false},
+  {nickname:"เด่น",fullname:"ปกรณ์ เกษมธนกุล",type:"Fellow",price:0,daysLeft:286,endDate:"2027-02-14",status:"active",inferred:false},
+  {nickname:"แพ๊ตตี้",fullname:"ภัทธิดา จุลศักดิ์ศรีสกุล",type:"Distinguish",price:0,daysLeft:291,endDate:"2027-02-19",status:"active",inferred:false},
+  {nickname:"แพท",fullname:"วริศรา พลไพศาล",type:"Distinguish",price:0,daysLeft:291,endDate:"2027-02-19",status:"active",inferred:false},
+  {nickname:"โน๊ต",fullname:"ศรัณญา สืบค้า",type:"Fellow",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"ติ๋ม",fullname:"ศิริลักษณ์ ไม้ไทย",type:"Fellow",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"นัช",fullname:"nan",type:"Fellow",price:0,daysLeft:300,endDate:"2027-02-28",status:"active",inferred:false},
+  {nickname:"ย้ง",fullname:"ตะวัน เทวอักษร",type:"Renew",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"เกด",fullname:"เกษแก้ว อิทธิกุล",type:"Renew",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"จุง",fullname:"วรรณี ควรสถาพร",type:"Renew",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"หนึ่ง",fullname:"ครรชิต บุนะจินดา",type:"Renew",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:true},
+  {nickname:"เจ",fullname:"กฤษฎา เลิศธรรมนาถ",type:"Distinguish",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"ชวน",fullname:"วุฒิพงศ์ แซ่อึ้ง",type:"Fellow",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"โฟม",fullname:"ฬสนันท์ ภูนิธิพันธุ์กุล",type:"Fellow",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"ริว",fullname:"พศิน ควรสถาพร",type:"Distinguish",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"หมู",fullname:"เบญจวรรณ รุ่งเจริญชัย",type:"Renew",price:0,daysLeft:331,endDate:"2027-03-31",status:"active",inferred:false},
+  {nickname:"ปราง",fullname:"โปรดปราน หมื่นสุกแสง",type:"Renew",price:0,daysLeft:361,endDate:"2027-04-30",status:"active",inferred:false},
+  {nickname:"ฮั้ว",fullname:"อริยา ตั้งมิตรประชา",type:"Renew",price:0,daysLeft:380,endDate:"2027-05-19",status:"active",inferred:false},
+  {nickname:"แมน",fullname:"บุญชัย พุทธาโกฐิรัตน์",type:"Renew",price:0,daysLeft:380,endDate:"2027-05-19",status:"active",inferred:false},
+  {nickname:"แพน",fullname:"แพนพิทย์ ภรรณนิภา",type:"Renew",price:0,daysLeft:382,endDate:"2027-05-21",status:"active",inferred:false},
+  {nickname:"โบนัส",fullname:"วิณารัตน์ ศรีพยัคฆ์",type:"Distinguish",price:0,daysLeft:392,endDate:"2027-05-31",status:"active",inferred:false},
+  {nickname:"หวานเย็น",fullname:"nan",type:"Fellow",price:0,daysLeft:392,endDate:"2027-05-31",status:"active",inferred:false},
+  {nickname:"ฟ้า",fullname:"ธนัญญา สุธีรชัย",type:"Distinguish",price:0,daysLeft:406,endDate:"2027-06-14",status:"active",inferred:false},
+  {nickname:"ป๊อด",fullname:"จักรชลัช เกษจำรัส",type:"Distinguish",price:0,daysLeft:406,endDate:"2027-06-14",status:"active",inferred:false},
+  {nickname:"สร",fullname:"อนุสรณ์ อาศิรเลิศสิริ",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"รัก",fullname:"วรมาศ ศรีวัฒนประภา",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"หยุย",fullname:"ธิดารัตน์ จันทร์ไทย",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"ติ",fullname:"จุติพันธุ์ มงคลสุธี",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ตอน",fullname:"ทนงค์ศักดิ์ แซ่เอี้ยว",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ยุ้ย",fullname:"จตุพร วงษ์ทอง",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"วิน",fullname:"วศิน มานะสุรางกูล",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ปั๊ก",fullname:"อุไรวรรณ อ่อนเจริญ",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"โอม",fullname:"ดิศรา อุดมเดช",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ตงตง",fullname:"ศรัณย์ ชินสุวพลา",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"กุ้ง",fullname:"ดมิศา พิศิษฐวานิช",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"กิ๊ฟ",fullname:"แคทลียา ท้วมประถม",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"ฮง",fullname:"ประสงค์ ลิ้มเจริญ",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"โย",fullname:"ศิริพงษ์ ศิริสัจจวัฒน์",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:true},
+  {nickname:"จิว",fullname:"เมธี จารุมณีโรจน์",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"หวัน",fullname:"วสันต์ ติรางกูร",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"Hippy",fullname:"สมานชัย อธิพันธุ์อำไพ",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"เท่ห์",fullname:"พงศ์เทพ วงศ์แหลมทอง",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"วิน",fullname:"ธิวินท์ ศรีนคารินทร์",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"กัน",fullname:"อรุณเทพ แสงวารีทิพย์",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ปริญ",fullname:"ปริญญา เธียรวร",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ใหญ่",fullname:"ปุณณมี สัจจกมล",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"บี",fullname:"พีรณัฎฐ์ ทูลแสงงาม",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ชัย",fullname:"อัครวัฒน์ ฉันทแดนสุวรรณ",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"นก",fullname:"โชติกา อุตสาหจิต",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ต่อ",fullname:"ณัฐกรณ์ รัตนชัยสิทธิ์",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ไกร",fullname:"ไกร วิมลเฉลา",type:"Renew",price:325000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"แท๊ป",fullname:"รวิศ หาญอุตสาหะ",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"เซ่",fullname:"พลอย ลุมทอง",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"หมอนาย",fullname:"ดิตถพงษ์ บุญอำพล",type:"Fellow",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"วัฒน์",fullname:"วรวัฒน์ ชิ้นปิ่นเกลียว",type:"Fellow",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"มิหมี",fullname:"อรนุช เลิศสุวรรณกิจ",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"เดียร์",fullname:"ศศิชา วิริยะนิธิกรณ์",type:"Distinguish",price:0,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"แนน",fullname:"พีรดา ยงวงศ์ไพบูลย์",type:"Distinguish",price:0,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ไอซ์",fullname:"สุพิชญา พู่พิสุทธิ์",type:"Renew",price:0,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"เอ็กซ์",fullname:"ชัยวัฒน์ พู่พิสุทธิ์",type:"Renew",price:0,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"นัท",fullname:"วนัชพร ณ เชียงใหม่",type:"Fellow",price:350000,daysLeft:484,endDate:"2027-08-31",status:"active",inferred:false},
+  {nickname:"แอร์",fullname:"อโรชา เพิ่มทวีผล",type:"Renew",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"ไก๊",fullname:"ประวิตร อัศวานนท์",type:"Fellow",price:350000,daysLeft:422,endDate:"2027-06-30",status:"active",inferred:false},
+  {nickname:"โต้ง",fullname:"จักรินทร์ ประสิทธิ์วรนันท์",type:"Fellow",price:350000,daysLeft:425,endDate:"2027-07-03",status:"active",inferred:false},
+  {nickname:"ตั้ม",fullname:"จักรพันธ์ ประสิทธิ์วรนันท์",type:"Renew",price:0,daysLeft:462,endDate:"2027-08-09",status:"active",inferred:false},
+  {nickname:"เจ",fullname:"ณัฐพร สุมิตรัชตานนท์",type:"Distinguish",price:0,daysLeft:432,endDate:"2027-07-10",status:"active",inferred:false},
+  {nickname:"โจ",fullname:"ปฐม สุมิตรัชตานนท์",type:"Distinguish",price:0,daysLeft:432,endDate:"2027-07-10",status:"active",inferred:false},
+  {nickname:"พีค",fullname:"ณัฐวุฒิ ชินวันทนานนท์",type:"Distinguish",price:0,daysLeft:495,endDate:"2027-09-11",status:"active",inferred:false},
+  {nickname:"มิกกี้",fullname:"nan",type:"Fellow",price:0,daysLeft:437,endDate:"2027-07-15",status:"active",inferred:false},
+  {nickname:"เอ็ม",fullname:"nan",type:"Fellow",price:0,daysLeft:437,endDate:"2027-07-15",status:"active",inferred:false},
+  {nickname:"ม๋ำ",fullname:"nan",type:"Fellow",price:0,daysLeft:438,endDate:"2027-07-16",status:"active",inferred:false},
+  {nickname:"ปุ๊ก",fullname:"nan",type:"Fellow",price:0,daysLeft:439,endDate:"2027-07-17",status:"active",inferred:false},
+  {nickname:"วุฒิ",fullname:"ณัฐวุฒิ หิรัญพันธุ์ทิพย์",type:"Distinguish",price:0,daysLeft:475,endDate:"2027-08-22",status:"active",inferred:false},
+  {nickname:"เบส",fullname:"สคาญจิต อุดมกิจวัฒนา",type:"Distinguish",price:0,daysLeft:476,endDate:"2027-08-23",status:"active",inferred:false},
+  {nickname:"ชีต้าร์",fullname:"ณพสิทธิ์ แต้ศิริเวชช์",type:"Fellow",price:0,daysLeft:484,endDate:"2027-08-31",status:"active",inferred:false},
+  {nickname:"เบนซ์",fullname:"เบญจภณ วิเศษสินธพ",type:"Renew",price:0,daysLeft:484,endDate:"2027-08-31",status:"active",inferred:false},
+  {nickname:"ไก่",fullname:"กาญจนา ลิ้มปัญญาเลิศ",type:"Renew",price:350000,daysLeft:484,endDate:"2027-08-31",status:"active",inferred:false},
+  {nickname:"เจี๊ยบ",fullname:"nan",type:"Fellow",price:0,daysLeft:485,endDate:"2027-09-01",status:"active",inferred:false},
+  {nickname:"เก๋",fullname:"อาทิตยา สูรพันธุ์",type:"Distinguish",price:0,daysLeft:492,endDate:"2027-09-08",status:"active",inferred:false},
+  {nickname:"แนท",fullname:"ชนัญญา ยงวงศ์ไพบูลย์",type:"Distinguish",price:0,daysLeft:545,endDate:"2027-10-31",status:"active",inferred:false},
+  {nickname:"บิ๊กวิศ",fullname:"nan",type:"Invitation",price:0,daysLeft:606,endDate:"2027-12-31",status:"active",inferred:false},
+  {nickname:"มิ้น",fullname:"nan",type:"Invitation",price:0,daysLeft:241,endDate:"2026-12-31",status:"active",inferred:false},
+];
+
+// LEADS — ข้อมูลจริงจาก HOW Interest Form (ม.ค.–เม.ย. 2569)
+const LEAD_STEPS       = ['📋 Info','📞 Contact','📅 Appoint','🏋 Visit','🤔 Consider','📞 Follow','💰 Billing','✅ On-board'];
+const LEAD_STEP_SHORT  = ['I','C','Ap','V','Co','F','B','P'];
+const LEAD_STAGES_ORDER = LEAD_STEPS;
+const LEADS = [
+  {nickname:'Ou',    name:'Ou Sakulthai',          company:'–',                              poc:'Mambo',  source:'Website',  stageIdx:7, outcome:'paid', firstDate:'2026-01-05', lastDate:'2026-03-16', notes:'On-board แล้ว ✓'},
+  {nickname:'Jobb',  name:'Voravat Techamontrikul', company:'IMAGE SOLUTION X',              poc:'Mambo',  source:'Refer',    stageIdx:7, outcome:'paid', firstDate:'2026-01-13', lastDate:'2026-03-16', notes:'เพื่อนพี่ตั๊ก · On-board แล้ว ✓'},
+  {nickname:'Sun',   name:'Sun',                    company:'–',                             poc:'Mambo',  source:"P'Tak",    stageIdx:4, outcome:'no',   firstDate:'2026-01-20', lastDate:'2026-03-16', notes:'ไม่สนใจ'},
+  {nickname:'Oody',  name:'Oody',                   company:'–',                             poc:'Mambo',  source:'–',        stageIdx:4, outcome:'no',   firstDate:'2026-01-20', lastDate:'2026-02-18', notes:'ถามให้หัวหน้า · ไม่สนใจ'},
+  {nickname:'Belle', name:'Belle',                  company:'–',                             poc:'Mambo',  source:"P'Ying",   stageIdx:4, outcome:null,   firstDate:'2026-02-09', lastDate:'2026-04-10', notes:'หายไป อ่านไม่ตอบ'},
+  {nickname:'OFF',   name:'Ampoon Aurjongmanee',    company:'ปึงหงี่เชียง ฟู้ด โปรดักส์',   poc:'Mambo',  source:'Refer',    stageIdx:7, outcome:'paid', firstDate:'2026-02-14', lastDate:null,         notes:'On-board แล้ว ✓'},
+  {nickname:'Han',   name:'Han',                    company:'–',                             poc:'Mambo',  source:'Refer',    stageIdx:4, outcome:null,   firstDate:'2026-02-18', lastDate:'2026-04-28', notes:'อาจจะ · รอ decision'},
+  {nickname:'Ple',   name:'Ple Nakorn',             company:'–',                             poc:"พี่โจ้", source:'–',        stageIdx:4, outcome:null,   firstDate:null,         lastDate:'2026-04-29', notes:'ถามราคาแล้ว'},
+  {nickname:'Nuy',   name:'Nuy',                    company:'–',                             poc:"พี่โจ้", source:'–',        stageIdx:4, outcome:null,   firstDate:null,         lastDate:'2026-04-20', notes:'กำลังพิจารณา'},
+  {nickname:'Aman',  name:'Aman Modi',              company:'BCG Thailand',                  poc:'Yui',    source:'Website',  stageIdx:1, outcome:null,   firstDate:'2026-04-25', lastDate:'2026-04-28', notes:'Head of BCG Thailand · ยังไม่โทรกลับ'},
+  {nickname:'Ninew', name:'Ninew Irin',             company:'–',                             poc:'Mambo',  source:"P'Tak",    stageIdx:1, outcome:null,   firstDate:null,         lastDate:'2026-04-29', notes:'ติดต่อผ่าน Line'},
+  {nickname:'Kik',   name:'Kik Chanasin',           company:'–',                             poc:'Mambo',  source:"P'Tak",    stageIdx:1, outcome:null,   firstDate:null,         lastDate:'2026-04-29', notes:'ยังไม่อ่าน Line'},
+  {nickname:'Pong',  name:'Pong Adipong',           company:'–',                             poc:'Mambo',  source:"P'Tak",    stageIdx:1, outcome:null,   firstDate:null,         lastDate:'2026-04-29', notes:'ตอบ Line แล้ว'},
+  {nickname:'Krarok',name:'Wuttaya Hnunbhakdi',     company:'GAT',                           poc:'Mambo',  source:'Website',  stageIdx:1, outcome:null,   firstDate:'2026-04-28', lastDate:'2026-04-29', notes:'CEO GAT · Line แล้ว โทรไม่รับ'},
+];
+
+// ══════════════════════════════════════
+// CONFIG (Firestore-synced)
+// ══════════════════════════════════════
+const CONFIG_DEFAULTS = {
+  priceNew: 420000,
+  priceRenew: 350000,
+  priceDistinguish: 0,
+  priceFamily: 650000,
+  priceCorporate: 380000,
+  priceFellow: 0,
+  thresholdCritical: 30,
+  thresholdSoon: 90,
+  thresholdWatch: 180,
+  renewalRate: 85,
+  expiredWindowDefault: 30,
+};
+let CFG = {...CONFIG_DEFAULTS};
+
+// ══════════════════════════════════════
+// MEMBER HISTORY DATA
+// Source: Excel "new by tata" + "3 Year Members" sheets
+// Dedup: nick+fullname composite key, exclude staff (Tak/Ying/Yui/Mambo ฯลฯ)
+// Note: gap ~42 คน จาก name spelling ต่างกัน — ต้อง data clean ต่อ
+// ══════════════════════════════════════
+const HISTORY_DATA_READY = true;
+const HISTORY_TOTAL_EVER = 346; // ตามที่นับใน Excel (rows with member data, excl. staff)
+
+const HISTORY_COHORTS = [
+  {
+    label: '🌟 ก่อตั้ง (ม.ค.–ก.พ. 2567)',
+    total: 191, active: 162, expired: 29,
+    note: 'ม.ค.: 126 คน · ก.พ.: 65 คน · Feb retention 98%',
+  },
+  {
+    label: '2567 (มี.ค.–ธ.ค.)',
+    total: 43, active: 35, expired: 8,
+    note: 'ขยายตัวตลอดปีแรก',
+  },
+  {
+    label: '2568 ทั้งปี',
+    total: 122, active: 70, expired: 52,
+    note: 'Churn เพิ่มขึ้น — 1yr founding batch เริ่มหมด',
+  },
+  {
+    label: '2569 (ม.ค.–พ.ค.)',
+    total: 27, active: 27, expired: 0,
+    note: 'สมาชิกใหม่ปีนี้ ทั้งหมดยังอยู่',
+  },
+];
+const HISTORY_TYPES = [
+  {label:'สมาชิก 1 ปี (Annual)',      total:302, active:253, expired:49, icon:'📅'},
+  {label:'สมาชิก 3 ปี (Distinguish)', total:43,  active:42,  expired:1,  icon:'⭐'},
+];
+// Monthly new joins + churn (from Excel end dates)
+const HISTORY_TIMELINE = [
+  {ym:'2024-01',label:'ม.ค. 67', newM:126, churn:0},
+  {ym:'2024-02',label:'ก.พ. 67', newM:65,  churn:0},
+  {ym:'2024-05',label:'พ.ค. 67', newM:4,   churn:0},
+  {ym:'2024-06',label:'มิ.ย. 67',newM:6,   churn:0},
+  {ym:'2024-07',label:'ก.ค. 67', newM:16,  churn:0},
+  {ym:'2024-08',label:'ส.ค. 67', newM:7,   churn:0},
+  {ym:'2024-10',label:'ต.ค. 67', newM:2,   churn:0},
+  {ym:'2024-11',label:'พ.ย. 67', newM:7,   churn:0},
+  {ym:'2025-01',label:'ม.ค. 68', newM:42,  churn:0},
+  {ym:'2025-02',label:'ก.พ. 68', newM:26,  churn:0},
+  {ym:'2025-03',label:'มี.ค. 68',newM:11,  churn:0},
+  {ym:'2025-04',label:'เม.ย. 68',newM:7,   churn:0},
+  {ym:'2025-05',label:'พ.ค. 68', newM:10,  churn:2},
+  {ym:'2025-06',label:'มิ.ย. 68',newM:9,   churn:0},
+  {ym:'2025-07',label:'ก.ค. 68', newM:8,   churn:2},
+  {ym:'2025-08',label:'ส.ค. 68', newM:4,   churn:0},
+  {ym:'2025-09',label:'ก.ย. 68', newM:3,   churn:1},
+  {ym:'2025-10',label:'ต.ค. 68', newM:2,   churn:0},
+  {ym:'2025-11',label:'พ.ย. 68', newM:0,   churn:3},
+  {ym:'2025-12',label:'ธ.ค. 68', newM:0,   churn:11},
+  {ym:'2026-01',label:'ม.ค. 69', newM:12,  churn:5},
+  {ym:'2026-02',label:'ก.พ. 69', newM:4,   churn:17},
+  {ym:'2026-03',label:'มี.ค. 69',newM:7,   churn:37},
+  {ym:'2026-04',label:'เม.ย. 69',newM:3,   churn:10},
+  {ym:'2026-05',label:'พ.ค. 69', newM:1,   churn:1},
+];
+const HISTORY_LONGEVITY = [
+  {nick:'เชษ',   full:'เชษฐา เทอดไพรสันต์',    since:'ม.ค. 2567', till:'ม.ค. 2570', months:36, mtype:'3yr'},
+  {nick:'จูน',   full:'จรีพร จารุกรสกุล',        since:'ก.พ. 2567', till:'ม.ค. 2570', months:35, mtype:'3yr'},
+  {nick:'แพม',   full:'–',                       since:'ก.พ. 2567', till:'ธ.ค. 2568', months:22, mtype:'1yr renew'},
+  {nick:'หมอนาย',full:'ดิตถพงษ์ บุญอำพล',       since:'ม.ค. 2567', till:'มี.ค. 2569', months:26, mtype:'1yr renew'},
+  {nick:'ไม้ฟืน',full:'พะเนียง พงษธา',          since:'ม.ค. 2567', till:'มิ.ย. 2569', months:29, mtype:'1yr renew'},
+];
+
+// RENEWALS — หมดสัญญา
+// stageIdx: -1=ยังไม่เริ่ม, 0-5=step ปัจจุบัน, 6=สำเร็จแล้ว
+const RENEW_STEPS = ['📧 Email','📱 Line','💬 Talk','📋 QT','💰 Billing','✅ Payment'];
+const RENEW_STEP_SHORT = ['E','L','T','Q','B','P'];
+function recomputeRenewals(){
+  return MEMBERS
+    .filter(m => m.daysLeft > 0 && m.daysLeft <= CFG.thresholdWatch)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .map(m => ({
+      name: (m.fullname && m.fullname !== 'nan') ? m.fullname + ' (' + m.nickname + ')' : m.nickname,
+      owner: '—', qty: 1, daysLeft: m.daysLeft,
+      endDate: m.endDate, stageIdx: -1, outcome: null,
+      notes: ''
+    }));
+}
+let RENEWALS = recomputeRenewals();
+
+const EXPIRED_MEMBERS = [
+  {nickname:"พัด", fullname:"ปัณพรพัชร มุสิกะ", endDate:"2026-05-01", daysExpired: 3},
+  {nickname:"โบ้", fullname:"สาโรจน์ อัศวพรชัย", endDate:"2026-04-30", daysExpired: 4},
+  {nickname:"โอ๊ต", fullname:"ศราวุธ อนรรฆธรรม", endDate:"2026-04-30", daysExpired: 4},
+  {nickname:"ตี้", fullname:"ชยุต ตุลยนิติกุล", endDate:"2026-04-30", daysExpired: 4},
+  {nickname:"โน๊ต", fullname:"นลินี ปูนบัญฑิตย์กุล", endDate:"2026-04-30", daysExpired: 4},
+  {nickname:"โอชิน", fullname:"ฐณัฐฐภร โอภาสวรรัตน์", endDate:"2026-04-30", daysExpired: 4},
+  {nickname:"ส้ม", fullname:"วิภาพร จิระพัฒน์พิศาล", endDate:"2026-04-30", daysExpired: 4},
+  {nickname:"เต้", fullname:"ไชยภาพ​ อัญ​ญา​นุ​ภาพ​", endDate:"2026-04-30", daysExpired: 4},
+  {nickname:"พจน์", fullname:"วรพจน์ กันตพิพัฒน์", endDate:"2026-04-30", daysExpired: 4},
+  {nickname:"ยอ", fullname:"อิศรา ถาวรพิชญไชย", endDate:"2026-04-18", daysExpired: 16},
+  {nickname:"ก้อย", fullname:"รวีรัตน์ สัจจวโรดม", endDate:"2026-04-14", daysExpired: 20},
+  {nickname:"นิค", fullname:"วรัญญู ศิลา", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"ป้อม", fullname:"ภาวุธ พงษ์วิทยภานุ", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"แน๊ตตี้", fullname:"กัญญาณัฐ ปิติเจริญ", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"โจ้", fullname:"อัคคะภัทร์ จิระอารีย์บุตร", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"ชิน", fullname:"ทศพล ชัยชนะวิชชกิจ", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"คิง", fullname:"ฉัตรมงคล เขมาภิรัตน์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"โมทย์", fullname:"ปราโมทย์ พวงสำลี", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"โอ๊ค", fullname:"วุฒินันท์ สังข์อ่อง", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"ป้อม", fullname:"ศิวัตร เชาวรียวงษ์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"โยโย่", fullname:"ภคมน ตุลยาพิศิษฐ์ชัย", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"บอล", fullname:"ธนธัส ถนอม", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"ปู", fullname:"สุรัตน์ ประลองศิลป์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"จง", fullname:"จงคม ชูชัยศรี", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"เบน", fullname:"เบน ณ นคร", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"แตน", fullname:"ธันยวดี วะสีนนท์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"เอส", fullname:"สาธิต นิ่มพิทักษ์พงศ์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"นน", fullname:"ธนนท์ เจียรพันธุ์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"หนาม", fullname:"รวิ อิทธิระวิวงศ์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"อุ้ย", fullname:"ปริญญา สินเกื้อกูล", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"อาร์ม", fullname:"ปิยะชาติ อิศรภักดี", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"บู้", fullname:"ไพจิตร มานะศิลป์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"คม", fullname:"คม วชิรวราการ", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"ฟาง", fullname:"ฐิตาภรณ์ จิรชนานนท์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"ทิปปี้", fullname:"ชลรัศมี งาทวีสุข", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"พอท", fullname:"มิตรดนัย สถาวรมณี", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"แนน", fullname:"ภมรวรรณ พงษ์ภาวศุทธิ์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"ทิพย์", fullname:"อภิชา อุฬารเสถียร", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"เปิ้ล", fullname:"อัญชลี เทวอักษร", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"พัช", fullname:"พัชรา ศิริปทุมมาศ", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"ซาร่า", fullname:"เสาวลักษณ์ โชติเทวัญ", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"จูน", fullname:"วรัญญา คงดำเนิน", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"นัท", fullname:"ธัญเนศวร์ ศิริโรจนานนท์", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"มาญ่า", fullname:"ยี่ฝัน หลิว", endDate:"2026-03-31", daysExpired: 34},
+  {nickname:"เอ็ม", fullname:"อคิรากร อิกิติสิริ", endDate:"2026-03-19", daysExpired: 46},
+  {nickname:"เน๊ท", fullname:"ธนพัฒน์ วิภูษิต", endDate:"2026-03-12", daysExpired: 53},
+  {nickname:"ดา", fullname:"พิมพิดา วรัญญูรัตนะ", endDate:"2026-03-10", daysExpired: 55},
+  {nickname:"แก้ว", fullname:"ทิพยสุดา ถาวรามร", endDate:"2026-03-06", daysExpired: 59},
+  {nickname:"โมนิก้า พลอย", fullname:"โมนิก้า พลอย มีเกียรติชัยกุล", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"เอ", fullname:"ภวิฑ กัมพลเศวต", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"แน๊ต", fullname:"ณัฐนิช สุขสวัสดิ์", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"มุก", fullname:"พิมลพร พัฒนวิมล", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"หนูหวาน", fullname:"วโรณิกา เรซ", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"แนน", fullname:"พนัชกร บุญยิ่งสถิตย์", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"บีน", fullname:"ธัญธร พัฒนอมร", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"ชา", fullname:"ประชา กนิลฐานนท์", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"กอล์ฟ", fullname:"ณัฐพล วิมลเฉลา", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"ภูมิ", fullname:"ภูริเดช อึ้งสุประเสริฐ", endDate:"2026-02-28", daysExpired: 65},
+  {nickname:"โบ๊ท", fullname:"ไผท ผดุงถิ่น", endDate:"2026-02-21", daysExpired: 72},
+  {nickname:"ไวน์", fullname:"ธนกร สีแสงทอง", endDate:"2026-02-21", daysExpired: 72},
+  {nickname:"โอ๋", fullname:"ศรศักดิ์ ถานบุรี", endDate:"2026-02-21", daysExpired: 72},
+  {nickname:"อ๋ม", fullname:"สมพร อำไพสุทธิพงษ์", endDate:"2026-02-21", daysExpired: 72},
+  {nickname:"โมชิ", fullname:"สุทธิเกียรติ จันทรชัยโรจน์", endDate:"2026-02-21", daysExpired: 72},
+  {nickname:"นิติ", fullname:"นิติ โอสถานุเคราะห์", endDate:"2026-02-04", daysExpired: 89},
+];
+let expiredWindow = 30;
+
+const RENEW_RATE_DATA = [
+  {month:'ม.ค.',expiring:8, renewed:7},
+  {month:'ก.พ.',expiring:5, renewed:5},
+  {month:'มี.ค.',expiring:12,renewed:10},
+  {month:'เม.ย.',expiring:6, renewed:5},
+  {month:'พ.ค.',expiring:24,renewed:null},
+];
+
+// ══════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════
+const MONTH_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const CUR_YEAR=2026, CUR_MONTH=5, CUR_ABS=CUR_YEAR*12+(CUR_MONTH-1);
+let deadlineYear=2026, deadlineMonth=12;
+
+
+const memberFilters={vintage:'all',mstatus:'all',mtype:'all'};
+const leadFilters={label:'all',source:'all'};
+const renewFilters={label:'all',outcome:'all'};
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function deadlineAbs(){return deadlineYear*12+(deadlineMonth-1);}
+function monthsRemaining(){return Math.max(1,deadlineAbs()-CUR_ABS+1);}
+function absToLabel(abs){const yr=Math.floor(abs/12),mo=abs%12;return MONTH_TH[mo]+(yr!==2026?' '+(yr+543):'');}
+function deadlineLabel(){return MONTH_TH[deadlineMonth-1]+(deadlineYear!==2026?' '+(deadlineYear+543):' 2569');}
+function calcETA(conv,leads){const m=leads*(conv/100);if(m<=0)return null;return CUR_ABS+Math.ceil((D.target-D.ytd)/m)-1;}
+function fmtMoney(n){return '฿'+(n/1e6).toFixed(2)+'M';}
+
+function vintageBucket(d){
+  const c=CFG.thresholdCritical, s=CFG.thresholdSoon, w=CFG.thresholdWatch;
+  if(d<c)  return {key:'critical',label:'🔴 วิกฤต',range:'< '+c+' วัน'};
+  if(d<s)  return {key:'soon',    label:'🟠 ใกล้',  range:c+'–'+s+' วัน'};
+  if(d<w)  return {key:'watch',   label:'🟡 เฝ้าดู',range:s+'–'+w+' วัน'};
+  return           {key:'safe',   label:'🟢 ปลอดภัย',range:w+'+ วัน'};
+}
+function renewLabel(d){
+  if(d<CFG.thresholdCritical) return 'hot';
+  if(d<CFG.thresholdSoon)     return 'warm';
+  return 'cold';
+}
+function daysSince(dateStr){
+  if(!dateStr) return null;
+  const d=new Date(dateStr);
+  const diff=(new Date('2026-05-04')-d)/(1000*60*60*24);
+  return Math.floor(diff);
+}
+function getLeadLabel(l){
+  if(l.outcome==='paid') return 'paid';
+  if(l.outcome==='no')   return 'no';
+  const ds=daysSince(l.lastDate)??daysSince(l.firstDate);
+  if(ds===null) return 'warm';
+  if(ds<=14)  return 'hot';
+  if(ds<=60)  return 'warm';
+  return 'cold';
+}
+function labelChipHtml(lbl){
+  const m={hot:'🔴 Hot',warm:'🟡 Warm',cold:'🔵 Cold',paid:'✅ On-board',no:'❌ ไม่สนใจ'};
+  const cls=lbl==='paid'?'success':lbl==='no'?'cold':lbl;
+  return `<span class="label-chip ${cls}">${m[lbl]||lbl}</span>`;
+}
+function daysChipHtml(d){
+  const b=vintageBucket(d);
+  return `<span class="days-chip ${b.key}">${d} วัน</span>`;
+}
+function healthColor(s){return s>=70?'var(--success)':s>=40?'var(--warm)':'var(--alert)';}
+function statusChipHtml(s){
+  const m={active:'✓ Active',expiring:'⏰ Expiring',risk:'⚠ Risk',drop:'✗ Drop'};
+  return `<span class="status-chip ${s}">${m[s]||s}</span>`;
+}
+function potentialHtml(p){const m={high:'สูง',mid:'กลาง',low:'ต่ำ'};return `<span class="potential-tag ${p}">${m[p]}</span>`;}
+function daysAgoHtml(d){
+  const c=d<=14?'var(--hot)':d<=60?'var(--warm)':'var(--muted)';
+  return `<span style="color:${c};font-weight:${d<=60?'700':'400'}">${d} วัน</span>`;
+}
+function visitsHtml(v){return v==='high'?'🟢 สูง':v==='mid'?'🟡 กลาง':'🔴 ต่ำ';}
+
+function processStepsHtml(stageIdx){
+  if(stageIdx<0) return '<span style="font-size:11px;color:var(--subtle);">ยังไม่เริ่ม</span>';
+  let html='<div class="process-steps">';
+  for(let i=0;i<6;i++){
+    const cls=i<stageIdx?'done':i===stageIdx?'current':'pending';
+    html+=`<span class="pstep ${cls}" title="${RENEW_STEPS[i]}">${RENEW_STEP_SHORT[i]}</span>`;
+    if(i<5) html+=`<span class="pstep-arr">›</span>`;
+  }
+  html+='</div>';
+  return html;
+}
+function outcomeHtml(o){
+  if(!o) return '<span class="outcome-badge pending">⏳ กำลังดำเนิน</span>';
+  const m={renew:'✅ ต่ออายุ',postpone:'⏸ เลื่อน',no:'❌ ไม่ต่อ'};
+  return `<span class="outcome-badge ${o}">${m[o]}</span>`;
+}
+
+// ══════════════════════════════════════
+// TAB SWITCH
+// ══════════════════════════════════════
+function switchTab(id,el){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  const panel=document.getElementById('tab-'+id);
+  panel.classList.add('active');
+}
+
+// ══════════════════════════════════════
+// TAB 1 — SIMULATOR
+// ══════════════════════════════════════
+function syncSlider(el){el.style.setProperty('--fill',((el.value-el.min)/(el.max-el.min)*100)+'%');}
+function onDeadlineChange(){
+  deadlineYear=parseInt(document.getElementById('dl-year').value);
+  deadlineMonth=parseInt(document.getElementById('dl-month').value);
+  const mo=monthsRemaining();
+  Array.from(document.getElementById('dl-month').options).forEach(o=>{o.disabled=deadlineYear===2026&&parseInt(o.value)<5;});
+  document.getElementById('db-months-left').textContent=mo;
+  document.getElementById('funnel-dl-label').textContent=deadlineLabel();
+  document.getElementById('funnel-mo-left').textContent=mo;
+  document.getElementById('ti-deadline').textContent=deadlineLabel();
+  document.getElementById('ti-deadline-sub').textContent='เหลือ '+mo+' เดือน';
+  runSim(); buildFunnel();
+}
+
+let simChart=null;
+function runSim(){
+  const conv=+document.getElementById('sl-conv').value;
+  const leads=+document.getElementById('sl-leads').value;
+  const renew=+document.getElementById('sl-renew').value;
+  ['sl-conv','sl-leads','sl-renew'].forEach(id=>syncSlider(document.getElementById(id)));
+  document.getElementById('conv-val').textContent=conv+'%';
+  document.getElementById('leads-val').textContent=leads;
+  document.getElementById('renew-val').textContent=renew+'%';
+  const moLeft=monthsRemaining();
+  const newL=Math.round(leads*moLeft*(conv/100));
+  const totalNew=D.ytd+newL;
+  const churn=Math.round(D.totalExpiring*(1-renew/100));
+  const yearEnd=D.active+newL-churn;
+  const rev=newL*D.fee;
+  const pct=Math.min((totalNew/D.target)*100,100);
+  const gap=Math.max(0,D.target-totalNew);
+  const onTrack=totalNew>=D.target;
+  const etaAbs=calcETA(conv,leads);
+  document.getElementById('ov-new').textContent=totalNew;
+  document.getElementById('ov-total').textContent=yearEnd;
+  document.getElementById('ov-rev').textContent='+฿'+(rev/1e6).toFixed(1)+'M';
+  document.getElementById('ov-churn').textContent=churn;
+  document.getElementById('ov-new').className='output-value '+(onTrack?'success':'alert');
+  document.getElementById('oc-new').className='output-card '+(onTrack?'ok':'warn');
+  const badge=document.getElementById('status-badge');
+  badge.className='status-badge '+(onTrack?'on-track':'off-track');
+  badge.textContent=onTrack?'✓ อยู่ในเป้า':'⚠ ต่ำกว่าเป้า — ขาดอีก '+gap+' คน';
+  document.getElementById('prog-label').textContent=Math.round(pct)+'%';
+  const fill=document.getElementById('prog-fill');
+  fill.style.width=pct+'%';
+  fill.style.background=onTrack?'var(--success)':pct>60?'var(--gold-mid)':'var(--alert)';
+  updateTI(etaAbs);
+  if(etaAbs!==null){document.getElementById('db-eta-val').textContent=absToLabel(etaAbs);document.getElementById('db-eta-val').style.color=etaAbs<=deadlineAbs()?'var(--success)':'var(--alert)';}
+  else{document.getElementById('db-eta-val').textContent='ไม่ถึงเป้า';document.getElementById('db-eta-val').style.color='var(--alert)';}
+  const chip=document.getElementById('db-status-chip');
+  if(etaAbs===null){chip.className='eta-chip no-data';chip.textContent='⚠ ไม่สามารถถึงเป้า';}
+  else if(etaAbs<=deadlineAbs()){chip.className='eta-chip on-time';chip.textContent='✓ ถึงเป้าก่อน Deadline';}
+  else{chip.className='eta-chip late';chip.textContent='⚠ ช้ากว่า '+(etaAbs-deadlineAbs())+' เดือน';}
+  const box=document.getElementById('sim-insight');
+  if(onTrack){box.className='insight-box success';box.innerHTML=`อัตราแปลง <strong>${conv}%</strong> + leads <strong>${leads}/เดือน</strong> → ได้ <strong>${totalNew} คน</strong> — <strong>✓ ถึงเป้า!</strong>`;}
+  else{box.className='insight-box';const needed=Math.ceil(gap/moLeft/(conv/100));box.innerHTML=`อัตราแปลง <strong>${conv}%</strong> + leads <strong>${leads}/เดือน</strong> → ได้ <strong>${totalNew} คน</strong> ขาด <strong>${gap} คน</strong> → ต้องเพิ่มเป็น <strong>~${needed} leads/เดือน</strong>`;}
+  rebuildSimChart(conv,leads);
+}
+
+function updateTI(etaAbs){
+  const te=document.getElementById('ti-eta'),ts=document.getElementById('ti-eta-sub');
+  const tst=document.getElementById('ti-status'),tss=document.getElementById('ti-status-sub');
+  if(etaAbs===null){te.textContent='∞ ไม่ถึงเป้า';te.className='ti-value alert';ts.textContent='leads น้อยเกินไป';tst.textContent='🔴 เป็นไปไม่ได้';tst.className='ti-value alert';tst.style.fontSize='13px';tss.textContent='เพิ่ม leads';return;}
+  te.textContent=absToLabel(etaAbs);
+  const diff=deadlineAbs()-etaAbs;
+  if(etaAbs<=deadlineAbs()){te.className='ti-value success';ts.textContent='จะถึงเป้าทันเวลา';tst.textContent=diff===0?'✅ ทันพอดี':'✅ เร็วกว่า '+diff+' เดือน';tst.className='ti-value success';tst.style.fontSize='14px';tss.textContent='';}
+  else{const late=etaAbs-deadlineAbs();te.className='ti-value alert';ts.textContent='จะพลาด Deadline';tst.textContent='🔴 ช้ากว่า '+late+' เดือน';tst.className='ti-value alert';tst.style.fontSize='14px';tss.textContent='เพิ่ม leads หรืออัตราแปลง';}
+}
+
+const vertLinePlugin={id:'vertLines',afterDraw(chart){
+  const opts=chart.options.plugins.vertLines;if(!opts||!opts.lines||!opts.lines.length)return;
+  const{ctx,chartArea,scales}=chart;
+  opts.lines.forEach(line=>{const idx=chart.data.labels.indexOf(line.label);if(idx<0)return;const x=scales.x.getPixelForValue(idx);ctx.save();ctx.beginPath();ctx.moveTo(x,chartArea.top);ctx.lineTo(x,chartArea.bottom);ctx.strokeStyle=line.color;ctx.lineWidth=1.5;ctx.setLineDash(line.dash||[]);ctx.stroke();if(line.text){ctx.fillStyle=line.color;ctx.font='bold 9px -apple-system,sans-serif';ctx.fillText(line.text,x+3,chartArea.top+10);}ctx.restore();});
+}};
+Chart.register(vertLinePlugin);
+
+function rebuildSimChart(conv,leads){
+  const monthly=leads*(conv/100);const etaAbs=calcETA(conv,leads);
+  const endAbs=Math.max(2026*12+11,deadlineAbs(),etaAbs!==null?etaAbs+1:0);
+  const labels=[],proj=[],tgt=[];
+  for(let abs=2026*12;abs<=endAbs;abs++){
+    const yr=Math.floor(abs/12),mo=abs%12;
+    labels.push(MONTH_TH[mo]+(yr!==2026?' '+(yr+543):''));
+    const i=abs-2026*12;
+    proj.push(i<4?Math.round(D.ytd*(i+1)/4):D.ytd+Math.round(monthly*(i-3)));
+    tgt.push(Math.round(D.target*(i+1)/(deadlineAbs()-2026*12+1)));
+  }
+  const dlLbl=MONTH_TH[deadlineMonth-1]+(deadlineYear!==2026?' '+(deadlineYear+543):'');
+  const lines=[{label:dlLbl,color:'rgba(184,50,40,0.55)',dash:[5,3],text:'เส้นตาย'}];
+  if(etaAbs!==null&&etaAbs!==deadlineAbs()){const ey=Math.floor(etaAbs/12),em=etaAbs%12;lines.push({label:MONTH_TH[em]+(ey!==2026?' '+(ey+543):''),color:etaAbs<=deadlineAbs()?'rgba(28,112,72,.55)':'rgba(196,154,60,.7)',dash:[4,4],text:'ETA'});}
+  if(simChart){simChart.data.labels=labels;simChart.data.datasets[0].data=proj;simChart.data.datasets[1].data=tgt;simChart.options.plugins.vertLines.lines=lines;simChart.data.datasets[0].pointBackgroundColor=labels.map((_,i)=>i<4?'#A8A69E':'#C49A3C');simChart.update('none');return;}
+  simChart=new Chart(document.getElementById('sim-chart').getContext('2d'),{type:'line',data:{labels,datasets:[
+    {label:'คาดการณ์',data:proj,borderColor:'#C49A3C',backgroundColor:'rgba(196,154,60,0.07)',fill:true,tension:0.3,borderWidth:2.5,pointRadius:3,pointBackgroundColor:labels.map((_,i)=>i<4?'#A8A69E':'#C49A3C'),pointBorderColor:'#fff',pointBorderWidth:1.5},
+    {label:'เป้าหมาย',data:tgt,borderColor:'rgba(184,50,40,0.5)',borderDash:[5,4],fill:false,tension:0,borderWidth:1.5,pointRadius:0},
+  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},vertLines:{lines},tooltip:{backgroundColor:'#fff',titleColor:'#12120E',bodyColor:'#7A7870',borderColor:'#E4E0D8',borderWidth:1,padding:10}},scales:{x:{grid:{color:'#F0EDE8'},ticks:{color:'#A8A69E',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:18}},y:{grid:{color:'#F0EDE8'},ticks:{color:'#A8A69E',font:{size:11}},beginAtZero:true}}}});
+}
+
+function buildFunnel(){
+  const target=Math.max(10,parseInt(document.getElementById('target-in').value)||200);
+  const moLeft=monthsRemaining();
+  document.getElementById('funnel-body').innerHTML='';
+  [{rate:25},{rate:33,current:true},{rate:40},{rate:50}].forEach(r=>{
+    const total=Math.ceil(target/(r.rate/100)),perMo=Math.ceil(total/moLeft),mult=Math.round(perMo/D.leadsBase),touch=Math.ceil(total*3);
+    const tr=document.createElement('tr');if(r.current)tr.className='current';
+    tr.innerHTML=`<td style="font-weight:700">${r.rate}%${r.current?'<span class="conv-tag">ปัจจุบัน</span>':''}</td><td style="font-weight:600">${total.toLocaleString()} ราย</td><td><span style="font-weight:700;color:var(--alert)">${perMo}</span><span style="font-size:11px;color:var(--muted)"> ราย/เดือน</span></td><td><span class="mult-badge">${mult}x</span></td><td style="color:var(--muted)">~${touch.toLocaleString()} ครั้ง</td>`;
+    document.getElementById('funnel-body').appendChild(tr);
+  });
+  const l33=Math.ceil(target/0.33),yrs=(l33/(D.leadsBase*12)).toFixed(1);
+  document.getElementById('funnel-alert').innerHTML=`<strong>🚨 Reality Check:</strong> อัตราแปลง 33% ต้องการ <strong>${l33.toLocaleString()} leads</strong> — ที่ velocity 2.2/เดือน ใช้เวลา <strong>${yrs} ปี</strong>. <strong>ปัญหา = Demand Generation ไม่ใช่ Conversion Rate</strong>`;
+}
+
+function initCliffChart(){
+  new Chart(document.getElementById('cliff-chart').getContext('2d'),{type:'bar',data:{labels:D.expiry.map(e=>e.m),datasets:[{label:'Expiring',data:D.expiry.map(e=>e.n),backgroundColor:D.expiry.map(e=>e.m==='ธ.ค.'?'rgba(184,50,40,0.72)':'rgba(196,154,60,0.62)'),borderColor:D.expiry.map(e=>e.m==='ธ.ค.'?'#B83228':'#C49A3C'),borderWidth:1.5,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#12120E',bodyColor:'#7A7870',borderColor:'#E4E0D8',borderWidth:1,padding:10,callbacks:{label:c=>`${c.parsed.y} สมาชิกหมดอายุ`,afterLabel:c=>c.label==='ธ.ค.'?'⚠ ช่วงวิกฤต!':''}}},scales:{x:{grid:{display:false},ticks:{color:'#A8A69E',font:{size:11}}},y:{grid:{color:'#F0EDE8'},ticks:{color:'#A8A69E',font:{size:11}},beginAtZero:true}}}});
+}
+
+// ══════════════════════════════════════
+// TAB 2 — MEMBER STATUS
+// ══════════════════════════════════════
+function setFilter(group,val,el){
+  memberFilters[group]=val;
+  document.querySelectorAll(`button[onclick*="setFilter('${group}'"]`).forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  buildMemberTable();
+}
+
+function buildVintageSummary(){
+  const counts={critical:0,soon:0,watch:0,safe:0};
+  MEMBERS.forEach(m=>{counts[vintageBucket(m.daysLeft).key]++;});
+  document.getElementById('vc-critical').textContent=counts.critical;
+  document.getElementById('vc-soon').textContent=counts.soon;
+  const html=`
+    <div class="vintage-card critical"><div class="vintage-num">${counts.critical}</div><div class="vintage-label">🔴 วิกฤต</div><div class="vintage-sub">&lt;30 วัน — กดเดี๋ยวนี้</div></div>
+    <div class="vintage-card soon"><div class="vintage-num">${counts.soon}</div><div class="vintage-label">🟠 ใกล้</div><div class="vintage-sub">30–90 วัน</div></div>
+    <div class="vintage-card watch"><div class="vintage-num">${counts.watch}</div><div class="vintage-label">🟡 เฝ้าดู</div><div class="vintage-sub">90–180 วัน</div></div>
+    <div class="vintage-card safe"><div class="vintage-num">${counts.safe}</div><div class="vintage-label">🟢 ปลอดภัย</div><div class="vintage-sub">180+ วัน</div></div>`;
+  document.getElementById('vintage-summary').innerHTML=html;
+}
+
+function buildMemberTable(){
+  const filtered=MEMBERS.filter(m=>{
+    if(memberFilters.vintage!=='all'&&vintageBucket(m.daysLeft).key!==memberFilters.vintage) return false;
+    if(memberFilters.mstatus!=='all'&&m.status!==memberFilters.mstatus) return false;
+    if(memberFilters.mtype!=='all'&&m.type!==memberFilters.mtype) return false;
+    return true;
+  });
+  document.getElementById('member-count').textContent=filtered.length;
+  const tbody=document.getElementById('member-body');tbody.innerHTML='';
+  filtered.forEach(m=>{
+    const vb=vintageBucket(m.daysLeft);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>
+        <div style="font-weight:600;font-size:12.5px;">${m.nickname}</div>
+        ${m.fullname?`<div style="font-size:11px;color:var(--muted);margin-top:1px;">${m.fullname}</div>`:''}
+      </td>
+      <td><span class="pic-tag" title="${m.inferred?'ข้อมูลอนุมาน: Excel ยังแสดง Expired แต่ End date ยังอยู่ในอนาคต รอ confirm':''}" style="background:${m.type==='Renew'?'#EBF5EE':m.type==='Fellow'?'#EEF2FF':m.type==='Distinguish'?'#FFF8EE':m.type==='Barter'?'#F5F0FF':'#F5F5F5'};color:${m.type==='Renew'?'#1C7048':m.type==='Fellow'?'#3B5BDB':m.type==='Distinguish'?'#C49A3C':m.type==='Barter'?'#7C3AED':'#888'};${m.inferred?'border:1px dashed currentColor;opacity:0.75;':''}">${m.type}${m.inferred?'<span style="font-size:9px;vertical-align:super;margin-left:1px;">?</span>':''}</span></td>
+      <td style="font-size:12px;color:var(--muted);">${m.price>0?'฿'+Math.round(m.price/1000)+'k':'–'}</td>
+      <td>${daysChipHtml(m.daysLeft)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ══════════════════════════════════════
+// TAB 3 — SALES & LEADS
+// ══════════════════════════════════════
+function setLeadFilter(group,val,el){
+  leadFilters[group]=val;
+  document.querySelectorAll(`button[onclick*="setLeadFilter('${group}'"]`).forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  buildLeadTable();
+}
+
+function leadStepsHtml(l){
+  if(l.outcome==='no')   return '<span style="font-size:11px;color:var(--alert);">❌ ไม่สนใจ</span>';
+  if(l.outcome==='paid') return '<span style="font-size:11px;color:var(--success);">✅ On-board</span>';
+  if(l.stageIdx<0)       return '<span style="font-size:11px;color:var(--subtle);">ยังไม่เริ่ม</span>';
+  let html='<div class="lead-steps">';
+  for(let i=0;i<LEAD_STEPS.length;i++){
+    const cls=i<l.stageIdx?'done':i===l.stageIdx?'current':'pending';
+    html+=`<span class="lstep ${cls}" title="${LEAD_STEPS[i]}">${LEAD_STEP_SHORT[i]}</span>`;
+    if(i<LEAD_STEPS.length-1) html+='<span class="lstep-arr">›</span>';
+  }
+  return html+'</div>';
+}
+function dateChipHtml(dateStr, label){
+  const ds=daysSince(dateStr);
+  if(ds===null) return `<span class="date-chip na">${label}: –</span>`;
+  const cls=ds<=14?'fresh':ds<=60?'mid':'old';
+  return `<span class="date-chip ${cls}">${label}: ${ds}ว</span>`;
+}
+function buildLeadTable(){
+  const active=LEADS.filter(l=>l.outcome===null);
+  const filtered=LEADS.filter(l=>{
+    const lbl=getLeadLabel(l);
+    if(leadFilters.label!=='all'){
+      if(leadFilters.label==='hot'&&lbl!=='hot') return false;
+      if(leadFilters.label==='warm'&&lbl!=='warm') return false;
+      if(leadFilters.label==='cold'&&lbl!=='cold') return false;
+    }
+    if(leadFilters.source!=='all'&&l.source!==leadFilters.source) return false;
+    return true;
+  });
+  const hot=active.filter(l=>getLeadLabel(l)==='hot').length;
+  const warm=active.filter(l=>getLeadLabel(l)==='warm').length;
+  const cold=active.filter(l=>getLeadLabel(l)==='cold').length;
+  document.getElementById('pipe-hot').textContent=hot;
+  document.getElementById('pipe-warm').textContent=warm;
+  document.getElementById('pipe-cold').textContent=cold;
+  const tbody=document.getElementById('lead-body');tbody.innerHTML='';
+  filtered.forEach(l=>{
+    const lbl=getLeadLabel(l);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="font-weight:700;font-size:12.5px;">${l.nickname}<div style="font-size:10.5px;font-weight:400;color:var(--muted);">${l.name!==l.nickname?l.name:''}</div></td>
+      <td>${leadStepsHtml(l)}</td>
+      <td>${labelChipHtml(lbl)}</td>
+      <td><span class="pic-tag">${l.poc}</span></td>
+      <td style="white-space:nowrap;">${dateChipHtml(l.firstDate,'เริ่ม')}</td>
+      <td style="white-space:nowrap;">${dateChipHtml(l.lastDate,'ล่าสุด')}</td>
+      <td style="font-size:11.5px;color:var(--muted);">${l.source}</td>
+      <td class="notes-cell">${l.notes}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function initLeadCharts(){
+  // Stage funnel (horizontal bar) — count per stage
+  const stageCounts={};
+  LEADS.forEach(l=>{const s=l.stageIdx>=0?(LEAD_STEPS[l.stageIdx]||'อื่นๆ'):'ยังไม่เริ่ม';stageCounts[s]=(stageCounts[s]||0)+1;});
+  const stageLabels=LEAD_STAGES_ORDER.filter(s=>stageCounts[s]>0);
+  const stageData=stageLabels.map(s=>stageCounts[s]||0);
+  new Chart(document.getElementById('stage-chart').getContext('2d'),{type:'bar',data:{labels:stageLabels,datasets:[{data:stageData,backgroundColor:'rgba(196,154,60,0.6)',borderColor:'#C49A3C',borderWidth:1.5,borderRadius:5}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#12120E',bodyColor:'#7A7870',borderColor:'#E4E0D8',borderWidth:1,padding:10,callbacks:{label:c=>`${c.parsed.x} leads`}}},scales:{x:{grid:{color:'#F0EDE8'},ticks:{color:'#A8A69E',font:{size:11}},beginAtZero:true,max:4},y:{grid:{display:false},ticks:{color:'#4A4A44',font:{size:11}}}}}});
+  // Source donut
+  const srcCounts={};LEADS.forEach(l=>{srcCounts[l.source]=(srcCounts[l.source]||0)+1;});
+  new Chart(document.getElementById('source-chart').getContext('2d'),{type:'doughnut',data:{labels:Object.keys(srcCounts),datasets:[{data:Object.values(srcCounts),backgroundColor:['rgba(196,154,60,.75)','rgba(34,84,160,.6)','rgba(28,112,72,.6)','rgba(201,75,42,.6)'],borderColor:'#fff',borderWidth:3}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#7A7870',padding:12}},tooltip:{backgroundColor:'#fff',titleColor:'#12120E',bodyColor:'#7A7870',borderColor:'#E4E0D8',borderWidth:1,padding:10}}}});
+}
+
+// ══════════════════════════════════════
+// TAB 4 — RENEWAL / หมดสัญญา
+// ══════════════════════════════════════
+function setRenewFilter(group,val,el){
+  renewFilters[group]=val;
+  document.querySelectorAll(`button[onclick*="setRenewFilter('${group}'"]`).forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  buildRenewalTable();
+}
+
+function getRenewLabel(r){
+  if(r.outcome) return renewLabel(0); // completed — classify by urgency of when it was
+  return renewLabel(r.daysLeft);
+}
+
+function buildRenewalTable(){
+  const filtered=RENEWALS.filter(r=>{
+    const lbl=renewLabel(r.daysLeft);
+    if(renewFilters.label!=='all'&&lbl!==renewFilters.label) return false;
+    if(renewFilters.outcome!=='all'){
+      const eff=r.outcome||'pending';
+      if(eff!==renewFilters.outcome) return false;
+    }
+    return true;
+  });
+  // Update counters
+  const hot=RENEWALS.filter(r=>!r.outcome&&r.daysLeft<CFG.thresholdCritical).length;
+  const warm=RENEWALS.filter(r=>!r.outcome&&r.daysLeft>=CFG.thresholdCritical&&r.daysLeft<CFG.thresholdSoon).length;
+  document.getElementById('rw-hot').textContent=hot;
+  document.getElementById('rw-warm').textContent=warm;
+
+  const tbody=document.getElementById('renewal-body');tbody.innerHTML='';
+  filtered.forEach(r=>{
+    const lbl=renewLabel(r.daysLeft);
+    const currentStageName=r.stageIdx<0?'ยังไม่เริ่ม':r.stageIdx>=6?'เสร็จสิ้น':RENEW_STEPS[r.stageIdx];
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="font-weight:600;font-size:12.5px;">${r.name}</td>
+      <td><span class="pic-tag">${r.owner}</span></td>
+      <td>${labelChipHtml(lbl)}</td>
+      <td>${r.daysLeft>0?daysChipHtml(r.daysLeft):'<span style="color:var(--muted);font-size:11px;">หมดแล้ว</span>'}</td>
+      <td style="text-align:center;font-weight:700;">${r.qty}</td>
+      <td>${processStepsHtml(r.stageIdx)}</td>
+      <td style="font-size:11.5px;color:var(--text-2);">${currentStageName}</td>
+      <td>${outcomeHtml(r.outcome)}</td>
+      <td class="notes-cell">${r.endDate ? '<span style="color:var(--muted);font-size:11px;">หมด ' + r.endDate + '</span>' : r.notes}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function setExpiredWindow(days, btn) {
+  expiredWindow = days;
+  document.querySelectorAll('.expired-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildExpiredTable();
+}
+
+function buildExpiredTable() {
+  const filtered = EXPIRED_MEMBERS.filter(m => m.daysExpired <= expiredWindow);
+  const tbody = document.getElementById('expired-body');
+  tbody.innerHTML = '';
+  document.getElementById('rw-expired').textContent = EXPIRED_MEMBERS.filter(m => m.daysExpired <= 30).length;
+  const badge = document.getElementById('expired-count-badge');
+  if (badge) badge.textContent = filtered.length + ' คน';
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">ไม่มีสมาชิกหมดอายุในช่วงนี้</td></tr>';
+    return;
+  }
+  filtered.forEach(m => {
+    const displayName = (m.fullname && m.fullname !== m.nickname)
+      ? m.fullname + ' (' + m.nickname + ')'
+      : m.nickname;
+    const urgency = m.daysExpired <= 14
+      ? 'color:var(--alert);font-weight:700;'
+      : m.daysExpired <= 30
+        ? 'color:var(--warm);font-weight:600;'
+        : 'color:var(--muted);';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:600;font-size:12.5px;">${displayName}</td>
+      <td><span style="font-size:12px;${urgency}">หมดไป ${m.daysExpired} วันแล้ว</span></td>
+      <td style="font-size:12px;color:var(--muted);">${m.endDate}</td>
+      <td><span style="font-size:11px;color:var(--muted);">—</span></td>
+      <td class="notes-cell" style="color:var(--muted);font-style:italic;font-size:11px;">ยังไม่มีข้อมูล follow up</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function initRenewRateChart(){
+  const labels=RENEW_RATE_DATA.map(d=>d.month);
+  const rates=RENEW_RATE_DATA.map(d=>d.renewed!==null?Math.round((d.renewed/d.expiring)*100):null);
+  new Chart(document.getElementById('renew-rate-chart').getContext('2d'),{type:'bar',data:{labels,datasets:[
+    {label:'Renew Rate %',data:rates,backgroundColor:rates.map(r=>r===null?'rgba(200,200,200,0.4)':r>=90?'rgba(28,112,72,0.65)':'rgba(196,154,60,0.65)'),borderColor:rates.map(r=>r===null?'#CCC':r>=90?'#1C7048':'#C49A3C'),borderWidth:1.5,borderRadius:6},
+  ]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#12120E',bodyColor:'#7A7870',borderColor:'#E4E0D8',borderWidth:1,padding:10,callbacks:{label:c=>c.parsed.y!==null?`Renew Rate: ${c.parsed.y}%`:'ยังไม่มีข้อมูล',afterLabel:c=>{const d=RENEW_RATE_DATA[c.dataIndex];return d.renewed!==null?`ต่ออายุ ${d.renewed} จาก ${d.expiring} คน`:`กำลังดำเนินการ (${d.expiring} คนหมดอายุ)`;}}}},scales:{x:{grid:{display:false},ticks:{color:'#A8A69E',font:{size:12}}},y:{grid:{color:'#F0EDE8'},ticks:{color:'#A8A69E',font:{size:11},callback:v=>v+'%'},beginAtZero:true,max:110,suggestedMin:70}}}});
+}
+
+// ══════════════════════════════════════
+// P&L INTELLIGENCE
+// ══════════════════════════════════════
+const PAID_MEMBERS=194;
+const PL_REVENUE=194*380000/12; // ฿6.143M
+const PL_CATS=[
+  {label:'สถานที่ (Venue)',   val:1200000},
+  {label:'พนักงาน (Staff)',   val:800000},
+  {label:'กิจกรรม (Events)', val:400000},
+  {label:'ค่าใช้จ่ายทั่วไป (Ops)',val:300000},
+  {label:'การตลาด (Marketing)',val:200000},
+];
+let plMode='simple';
+let plSimpleCost=PL_CATS.reduce((s,c)=>s+c.val,0); // 2,900,000
+let plCatVals=PL_CATS.map(c=>c.val);
+let plExtraCats=[];
+let plChart=null;
+
+function fmtM(n){return '฿'+(n/1e6).toFixed(2)+'M';}
+
+function _plTotalCost(){
+  if(plMode==='simple') return plSimpleCost;
+  return [...plCatVals,...plExtraCats.map(c=>c.val)].reduce((s,v)=>s+v,0);
+}
+
+function updatePLSummary(){
+  const rev=PL_REVENUE;
+  const cost=_plTotalCost();
+  const net=rev-cost;
+  const el=id=>document.getElementById(id);
+
+  // revenue at risk — use real expiry data (D.expiry[0] = current month)
+  const expiringNext30=D.expiry[0].n;
+  const avgRenewFee=CFG.priceRenew||350000;
+  const riskRev=expiringNext30*avgRenewFee/12;
+
+  // revenue card
+  if(el('pl-rev-val')) el('pl-rev-val').textContent=fmtM(rev);
+  if(el('pl-rev-sub')) el('pl-rev-sub').textContent=PAID_MEMBERS+' สมาชิก × ฿380k ÷ 12';
+
+  // risk card
+  if(el('pl-risk-val')) el('pl-risk-val').textContent=riskRev>0?fmtM(riskRev):'฿0';
+  if(el('pl-risk-sub')) el('pl-risk-sub').textContent=expiringNext30+' คนหมด <30 วัน (ถ้าไม่ต่อ)';
+
+  // cost card
+  if(el('pl-cost-disp')) el('pl-cost-disp').textContent=fmtM(cost);
+
+  // net card
+  if(el('pl-net-val')){
+    el('pl-net-val').textContent=(net>=0?'+':'')+fmtM(net);
+    el('pl-net-val').style.color=net>=0?'var(--success)':'var(--alert)';
+  }
+  if(el('pl-net-card')) el('pl-net-card').style.borderColor=net>=0?'var(--success)':'var(--alert)';
+
+  // cat total
+  if(el('pl-cat-total')) el('pl-cat-total').textContent='฿'+cost.toLocaleString();
+  buildPLChart(rev,cost);
+}
+
+function buildPLChart(rev,cost){
+  const ctx=document.getElementById('pl-chart');
+  if(!ctx) return;
+  const labels=['พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.'];
+  const monthDates=[[2026,5],[2026,6],[2026,7],[2026,8],[2026,9],[2026,10]];
+  const RENEWAL_RATE=CFG.renewalRate/100;
+  const avgMonthlyFee=(CFG.priceRenew||380000)/12;
+  let activePaid=PAID_MEMBERS;
+  const revs=monthDates.map(([yr,mo],idx)=>{
+    const exp=idx<D.expiry.length?D.expiry[idx].n:0;
+    const churned=Math.round(exp*(1-RENEWAL_RATE));
+    activePaid=Math.max(0,activePaid-churned);
+    return parseFloat((activePaid*avgMonthlyFee/1e6).toFixed(2));
+  });
+  const costs=labels.map(()=>parseFloat((cost/1e6).toFixed(2)));
+  const nets=revs.map((r,i)=>parseFloat((r-costs[i]).toFixed(2)));
+  if(plChart){plChart.destroy();plChart=null;}
+  plChart=new Chart(ctx.getContext('2d'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'รายได้ (M฿)',data:revs,backgroundColor:'rgba(28,112,72,0.45)',borderColor:'#1C7048',borderWidth:1.5,borderRadius:4,order:2},
+      {label:'คชจ (M฿)',data:costs,backgroundColor:'rgba(196,154,60,0.35)',borderColor:'#C49A3C',borderWidth:1.5,borderRadius:4,order:3},
+      {label:'กำไรสุทธิ (M฿)',data:nets,type:'line',borderColor:'#2A5CFF',backgroundColor:'rgba(42,92,255,0.07)',borderWidth:2,pointRadius:4,fill:true,tension:0.35,order:1},
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#7A7870',boxWidth:12}},tooltip:{backgroundColor:'#fff',titleColor:'#12120E',bodyColor:'#7A7870',borderColor:'#E4E0D8',borderWidth:1,padding:10,callbacks:{label:c=>`${c.dataset.label}: ฿${c.parsed.y}M`}}},scales:{x:{grid:{display:false},ticks:{color:'#A8A69E',font:{size:11}}},y:{grid:{color:'#F0EDE8'},ticks:{color:'#A8A69E',font:{size:11},callback:v=>'฿'+v+'M'}}}}
+  });
+}
+
+function setPLMode(mode,btn){
+  plMode=mode;
+  document.querySelectorAll('#pl-section .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const simple=document.getElementById('pl-mode-simple');
+  const cats=document.getElementById('pl-mode-cat');
+  if(simple) simple.style.display=mode==='simple'?'':'none';
+  if(cats)   cats.style.display=mode==='cat'?'':'none';
+  if(mode==='cat') renderPLCatTable();
+  updatePLSummary();
+}
+
+function onPLSlider(){
+  const slider=document.getElementById('pl-slider');
+  const input=document.getElementById('pl-cost-input');
+  if(!slider) return;
+  plSimpleCost=parseInt(slider.value);
+  if(input) input.value=plSimpleCost;
+  updatePLSummary();
+}
+
+function onPLInput(){
+  const input=document.getElementById('pl-cost-input');
+  const slider=document.getElementById('pl-slider');
+  if(!input) return;
+  plSimpleCost=parseInt(input.value)||0;
+  if(slider) slider.value=Math.min(Math.max(plSimpleCost,parseInt(slider.min)),parseInt(slider.max));
+  updatePLSummary();
+}
+
+function renderPLCatTable(){
+  const tbody=document.getElementById('pl-cat-body');
+  if(!tbody) return;
+  const allCats=[...PL_CATS.map((c,i)=>({label:c.label,val:plCatVals[i],idx:i,extra:false})),
+                 ...plExtraCats.map((c,i)=>({label:c.label,val:c.val,idx:i,extra:true}))];
+  tbody.innerHTML=allCats.map(c=>`
+    <tr>
+      <td style="font-size:12px;color:var(--text-2);padding:6px 4px;">${c.label}</td>
+      <td style="text-align:right;padding:6px 4px;">
+        <input type="number" style="width:110px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:right;font-weight:700;"
+          value="${c.val}" step="100000" min="0"
+          onchange="${c.extra?`plExtraCats[${c.idx}].val`:`plCatVals[${c.idx}]`}=parseInt(this.value||0);updatePLSummary();renderPLCatTable();" />
+      </td>
+      <td style="padding:6px 2px;">${c.extra?`<button onclick="plExtraCats.splice(${c.idx},1);renderPLCatTable();updatePLSummary();" style="border:none;background:none;color:var(--red);cursor:pointer;font-size:13px;">✕</button>`:'&nbsp;'}</td>
+    </tr>`).join('');
+  const total=_plTotalCost();
+  const el=document.getElementById('pl-cat-total');
+  if(el) el.textContent='฿'+total.toLocaleString();
+}
+
+function addPLCat(){
+  plExtraCats.push({label:'รายการใหม่',val:0});
+  setPLMode('cat',document.getElementById('plm-cat'));
+}
+
+// ══════════════════════════════════════
+// ══════════════════════════════════════
+// HISTORY TAB
+// ══════════════════════════════════════
+function buildHistoryTab(){
+  if(!HISTORY_DATA_READY){
+    const sections=['cohort-tbody','type-breakdown','narrative-list','longevity-table'];
+    sections.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.innerHTML='';
+    });
+    const placeholder=`<div style="padding:32px 24px;text-align:center;background:#FFF8EC;border:1.5px dashed #E4CE9A;border-radius:10px;margin:8px 0;">
+      <div style="font-size:22px;margin-bottom:8px;">⚠️</div>
+      <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:6px;">ข้อมูลรอการ Verify</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;max-width:400px;margin:0 auto;">ตัวเลขใน section นี้ต้องตรวจสอบจาก Excel ก่อนแสดงผล<br>เพื่อความถูกต้องของข้อมูลสำหรับผู้บริหาร</div>
+    </div>`;
+    ['cohort-tbody','type-breakdown','narrative-list','longevity-table'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.innerHTML=placeholder;
+    });
+    const ctx=document.getElementById('history-chart');
+    if(ctx) ctx.style.display='none';
+    return;
+  }
+  buildCohortTable();
+  buildTypeBreakdown();
+  buildNarrative();
+  buildHistoryChart();
+  buildLongevityTable();
+}
+
+function buildCohortTable(){
+  const tbody=document.getElementById('cohort-tbody');
+  if(!tbody) return;
+  const totals={total:0,active:0,expired:0};
+  HISTORY_COHORTS.forEach(c=>{totals.total+=c.total;totals.active+=c.active;totals.expired+=c.expired;});
+  tbody.innerHTML=HISTORY_COHORTS.map(c=>{
+    const pct=Math.round(c.active/c.total*100);
+    const barColor=pct>=90?'var(--success)':pct>=70?'var(--gold-mid)':'var(--alert)';
+    return `<tr style="border-bottom:1px solid var(--border-subtle);">
+      <td style="padding:10px 8px 10px 0;">
+        <div style="font-size:12.5px;font-weight:700;">${c.label}</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:1px;">${c.note}</div>
+      </td>
+      <td style="text-align:right;padding:10px 8px;font-size:14px;font-weight:800;color:var(--text-2);">${c.total}</td>
+      <td style="text-align:right;padding:10px 8px;font-size:14px;font-weight:800;color:var(--success);">${c.active}</td>
+      <td style="text-align:right;padding:10px 8px;font-size:14px;font-weight:700;color:var(--alert);">${c.expired}</td>
+      <td style="padding:10px 0 10px 8px;min-width:120px;">
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${barColor};border-radius:4px;"></div>
+          </div>
+          <span style="font-size:12px;font-weight:800;color:${barColor};white-space:nowrap;">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('')+`<tr style="border-top:2px solid var(--border);">
+    <td style="padding:10px 8px 6px 0;font-size:12px;font-weight:800;color:var(--text-2);">รวมทั้งหมด</td>
+    <td style="text-align:right;padding:10px 8px 6px;font-size:15px;font-weight:800;">${totals.total}</td>
+    <td style="text-align:right;padding:10px 8px 6px;font-size:15px;font-weight:800;color:var(--success);">${totals.active}</td>
+    <td style="text-align:right;padding:10px 8px 6px;font-size:15px;font-weight:800;color:var(--alert);">${totals.expired}</td>
+    <td style="padding:10px 0 6px 8px;">
+      <span style="font-size:13px;font-weight:800;color:var(--gold);">${Math.round(totals.active/totals.total*100)}% overall</span>
+    </td>
+  </tr>`;
+}
+
+function buildTypeBreakdown(){
+  const el=document.getElementById('type-breakdown');
+  if(!el) return;
+  el.innerHTML=HISTORY_TYPES.map(t=>{
+    const pct=Math.round(t.active/t.total*100);
+    const barColor=pct>=90?'var(--success)':pct>=70?'var(--gold-mid)':'var(--alert)';
+    return `<div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
+        <span style="font-size:12.5px;font-weight:700;">${t.icon} ${t.label}</span>
+        <span style="font-size:11px;color:var(--muted);">${t.total} คน</span>
+      </div>
+      <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin-bottom:4px;">
+        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:5px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;">
+        <span style="color:var(--success);font-weight:700;">✓ Active ${t.active}</span>
+        <span style="font-weight:800;color:${barColor};">${pct}% retention</span>
+        <span style="color:var(--alert);">✗ Expired ${t.expired}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildNarrative(){
+  const el=document.getElementById('narrative-list');
+  if(!el) return;
+  const narratives=[
+    {icon:'🌟',text:'HOW Bangkok มีสมาชิกเคยผ่านมาแล้ว <strong>346+ คน</strong> นับตั้งแต่ก่อตั้ง (ม.ค. 2567)'},
+    {icon:'🤝',text:'Founding batch ก.พ. 2567 จำนวน 65 คน ยังอยู่ <strong>64 คน (98%)</strong> — loyalty สูงมาก'},
+    {icon:'⭐',text:'สมาชิก 3 ปี (Distinguish) retention เกือบ <strong>100%</strong> — เทียบ 1 ปีที่ <strong>~84%</strong>'},
+    {icon:'📉',text:'มี.ค. 2569 คือเดือน churn สูงสุด <strong>37 คน</strong> — founding 1yr batch หมดพร้อมกัน'},
+    {icon:'🔄',text:'Q1 2569 churn รวม 64 คน แต่มีสมาชิกใหม่เข้า 23 คน — net -41 คน'},
+    {icon:'📊',text:'สมาชิก 2568 retention ต่ำสุด <strong>57%</strong> — กลุ่มเสี่ยงที่ควร engage ต่อเนื่อง'},
+  ];
+  el.innerHTML=narratives.map(n=>`
+    <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;line-height:1.55;">
+      <span style="font-size:14px;flex-shrink:0;margin-top:1px;">${n.icon}</span>
+      <span style="color:var(--text-2);">${n.text}</span>
+    </div>`).join('');
+}
+
+function buildHistoryChart(){
+  const ctx=document.getElementById('history-chart');
+  if(!ctx) return;
+  if(ctx._chartInst) ctx._chartInst.destroy();
+  const labels=HISTORY_TIMELINE.map(d=>d.label);
+  const newData=HISTORY_TIMELINE.map(d=>d.newM);
+  const churnData=HISTORY_TIMELINE.map(d=>-d.churn);
+  ctx._chartInst=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'สมาชิกใหม่',data:newData,backgroundColor:'rgba(28,112,72,0.55)',borderColor:'#1C7048',borderWidth:1,borderRadius:3},
+      {label:'หมดสัญญา',data:churnData,backgroundColor:'rgba(184,50,40,0.45)',borderColor:'#B83228',borderWidth:1,borderRadius:3},
+    ]},
+    options:{responsive:true,
+      plugins:{
+        legend:{position:'bottom',labels:{font:{size:11},color:'#7A7870',boxWidth:12}},
+        tooltip:{backgroundColor:'#fff',titleColor:'#12120E',bodyColor:'#7A7870',borderColor:'#E4E0D8',borderWidth:1,padding:10,
+          callbacks:{label:c=>`${c.dataset.label}: ${Math.abs(c.parsed.y)} คน`}
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#A8A69E',font:{size:10},maxRotation:45}},
+        y:{grid:{color:'#F0EDE8'},ticks:{color:'#A8A69E',font:{size:11},callback:v=>Math.abs(v)+' คน'},
+           title:{display:true,text:'จำนวน',color:'#A8A69E',font:{size:11}}}
+      }
+    }
+  });
+}
+
+function buildLongevityTable(){
+  const el=document.getElementById('longevity-table');
+  if(!el) return;
+  const rows=HISTORY_LONGEVITY.map((m,i)=>`
+    <tr style="border-bottom:1px solid var(--border-subtle);">
+      <td style="padding:9px 12px 9px 0;font-size:13px;font-weight:800;color:var(--gold);">#${i+1}</td>
+      <td style="padding:9px 12px;">
+        <div style="font-size:12.5px;font-weight:700;">${m.nick}</div>
+        <div style="font-size:11px;color:var(--muted);">${m.full}</div>
+      </td>
+      <td style="padding:9px 12px;font-size:11.5px;color:var(--text-2);">${m.since}</td>
+      <td style="padding:9px 12px;font-size:11.5px;color:var(--text-2);">${m.till}</td>
+      <td style="padding:9px 12px;"><span style="font-size:13px;font-weight:800;color:var(--gold);">${m.months}</span> <span style="font-size:10.5px;color:var(--muted);">เดือน</span></td>
+      <td style="padding:9px 0 9px 12px;"><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:var(--${m.mtype==='3yr'?'blue':'gold'}-light);color:var(--${m.mtype==='3yr'?'blue':'gold'});">${m.mtype}</span></td>
+    </tr>`).join('');
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="border-bottom:2px solid var(--border);">
+      <th style="text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 12px 8px 0;text-transform:uppercase;">#</th>
+      <th style="text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 12px 8px;text-transform:uppercase;">ชื่อ</th>
+      <th style="text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 12px 8px;text-transform:uppercase;">เริ่ม</th>
+      <th style="text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 12px 8px;text-transform:uppercase;">ถึง</th>
+      <th style="text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 12px 8px;text-transform:uppercase;">ระยะเวลา</th>
+      <th style="text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 0 8px 12px;text-transform:uppercase;">ประเภท</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// CONFIG FUNCTIONS
+// ══════════════════════════════════════
+const PRICE_KEYS=['priceNew','priceRenew','priceDistinguish','priceFamily','priceCorporate','priceFellow'];
+function cfgFmt(inp){
+  const raw=inp.value.replace(/[^0-9]/g,'');
+  const num=parseInt(raw)||0;
+  inp.value=num?num.toLocaleString('en-US'):'';
+}
+function cfgParseVal(k,inp){
+  if(PRICE_KEYS.includes(k)) return parseInt((inp.value||'0').replace(/,/g,''))||0;
+  return parseFloat(inp.value)||0;
+}
+function openConfig(){
+  document.getElementById('config-modal').style.display='flex';
+  Object.keys(CONFIG_DEFAULTS).forEach(k=>{
+    const inp=document.getElementById('cfg-'+k);
+    if(!inp) return;
+    const v=(CFG[k]!==undefined&&CFG[k]!==null)?CFG[k]:CONFIG_DEFAULTS[k];
+    inp.value=PRICE_KEYS.includes(k)?(v?v.toLocaleString('en-US'):''):v;
+  });
+  document.getElementById('config-status').textContent='';
+}
+function closeConfig(){
+  document.getElementById('config-modal').style.display='none';
+}
+function resetConfig(){
+  if(!confirm('รีเซ็ตค่าทั้งหมดกลับเป็นค่าเริ่มต้นไหม?')) return;
+  Object.keys(CONFIG_DEFAULTS).forEach(k=>{
+    const inp=document.getElementById('cfg-'+k);
+    if(inp) inp.value=CONFIG_DEFAULTS[k];
+  });
+  const st=document.getElementById('config-status');
+  st.textContent='รีเซ็ตแล้ว — กด "บันทึก" เพื่อยืนยัน';
+  st.style.color='var(--muted)';
+}
+async function saveConfig(){
+  const btn=document.getElementById('cfg-save-btn');
+  const st=document.getElementById('config-status');
+  btn.disabled=true; btn.textContent='กำลังบันทึก...';
+  const newCfg={};
+  Object.keys(CONFIG_DEFAULTS).forEach(k=>{
+    const inp=document.getElementById('cfg-'+k);
+    if(inp) newCfg[k]=cfgParseVal(k,inp);
+  });
+  newCfg.updatedBy=window._authUser?window._authUser.email:'unknown';
+  try{
+    await window._db.collection('config').doc('dashboard').set(newCfg,{merge:true});
+    CFG={...CONFIG_DEFAULTS,...newCfg};
+    expiredWindow=CFG.expiredWindowDefault;
+    applyConfig();
+    st.textContent='✅ บันทึกสำเร็จ'; st.style.color='var(--success)';
+    const lu=document.getElementById('config-last-update');
+    if(lu) lu.textContent='อัปเดตโดย '+newCfg.updatedBy+' · '+new Date().toLocaleDateString('th-TH');
+  }catch(err){
+    st.textContent='❌ '+err.message; st.style.color='var(--alert)';
+  }
+  btn.disabled=false; btn.textContent='💾 บันทึก';
+}
+async function loadConfig(){
+  if(!window._db) return;
+  try{
+    const doc=await window._db.collection('config').doc('dashboard').get();
+    if(doc.exists){
+      const data=doc.data();
+      CFG={...CONFIG_DEFAULTS,...data};
+      expiredWindow=CFG.expiredWindowDefault;
+      const lu=document.getElementById('config-last-update');
+      if(lu&&data.updatedBy) lu.textContent='อัปเดตโดย '+data.updatedBy+(data.updatedAt?' · '+data.updatedAt.toDate().toLocaleDateString('th-TH'):'');
+    } else {
+      await window._db.collection('config').doc('dashboard').set({
+        ...CONFIG_DEFAULTS,
+        updatedBy: window._authUser?window._authUser.email:'system'
+      });
+    }
+    applyConfig();
+  }catch(err){ console.warn('Config load failed, using defaults:',err); }
+}
+function applyConfig(){
+  RENEWALS=recomputeRenewals();
+  buildRenewalTable();
+  buildExpiredTable();
+  buildMemberTable();
+  buildVintageSummary();
+  updatePLSummary();
+  updateBadgesIfReady();
+}
+function updateBadgesIfReady(){
+  const btn=document.getElementById('tbn-renewal');
+  if(!btn) return;
+  const existing=btn.querySelector('.tab-badge');
+  if(existing) existing.remove();
+  const c=RENEWALS.filter(r=>!r.outcome&&r.daysLeft<CFG.thresholdCritical).length;
+  if(c>0){const b=document.createElement('span');b.className='tab-badge';b.textContent=c;btn.appendChild(b);}
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  // Live clock
+  (function tick(){const n=new Date();const t=n.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});const cl=document.getElementById('live-clock');if(cl)cl.textContent=t;}());
+  setInterval(function(){const n=new Date();const t=n.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});const cl=document.getElementById('live-clock');if(cl)cl.textContent=t;},60000);
+
+  // Tab urgency badges
+  function injectBadge(id, count){
+    const btn=document.getElementById(id);
+    if(!btn||count<=0) return;
+    const existing=btn.querySelector('.tab-badge');
+    if(existing) existing.remove();
+    const badge=document.createElement('span');
+    badge.className='tab-badge';
+    badge.textContent=count;
+    btn.appendChild(badge);
+  }
+  function updateBadges(){
+    injectBadge('tbn-members', MEMBERS.filter(m=>vintageBucket(m.daysLeft).key==='critical').length);
+    injectBadge('tbn-sales', LEADS.filter(l=>getLeadLabel(l)==='hot').length);
+    injectBadge('tbn-renewal', RENEWALS.filter(r=>!r.outcome&&r.daysLeft<CFG.thresholdCritical).length);
+  }
+  updateBadges();
+
+  document.querySelectorAll('input[type=range]').forEach(syncSlider);
+  Array.from(document.getElementById('dl-month').options).forEach(o=>{if(parseInt(o.value)<CUR_MONTH)o.disabled=true;});
+  // Tab 1
+  rebuildSimChart(33,2); runSim(); buildFunnel(); initCliffChart();
+  // Tab 2
+  updatePLSummary(); buildVintageSummary(); buildMemberTable();
+  // Tab 3
+  buildLeadTable(); initLeadCharts();
+  // Tab 4
+  buildRenewalTable(); buildExpiredTable(); initRenewRateChart();
+  // Tab 5
+  buildHistoryTab();
+});
+</script>
+
+<div class="footer-bar">
+  <span style="font-weight:600;color:var(--muted);">HOW Bangkok Membership Intelligence</span>
+  <span>ข้อมูล ณ พฤษภาคม 2569 &nbsp;·&nbsp; ต้นแบบระบบสำหรับการพิจารณา &nbsp;·&nbsp; 🔒 ใช้ภายใน</span>
+</div>
+
+<!-- ══════════════════ TAB 5: MEMBER HISTORY ══════════════════ -->
+<div id="tab-history" class="tab-panel">
+<div class="content">
+
+  <!-- KPI strip -->
+  <div class="metrics-row metrics-4" style="margin-bottom:18px;">
+    <div class="metric-card gold">
+      <div class="metric-label">สมาชิกทั้งหมดที่เคยเข้าร่วม</div>
+      <div class="metric-value" style="font-size:38px;">346<span style="font-size:14px;font-weight:500;">+</span></div>
+      <div class="metric-sub">unique members นับตั้งแต่ก่อตั้ง · ยังไม่ dedup 100%</div>
+    </div>
+    <div class="metric-card success">
+      <div class="metric-label">ยังอยู่ในระบบ (Active)</div>
+      <div class="metric-value" style="font-size:38px;">254</div>
+      <div class="metric-sub">ข้อมูลจากระบบ ณ พ.ค. 2569</div>
+    </div>
+    <div class="metric-card alert">
+      <div class="metric-label">หมดสัญญาแล้ว (Churned)</div>
+      <div class="metric-value" style="font-size:38px;">92</div>
+      <div class="metric-sub">overall churn rate ~27% · Peak มี.ค. 2569</div>
+    </div>
+    <div class="metric-card blue">
+      <div class="metric-label">Founding ก.พ. 2567 ยังอยู่</div>
+      <div class="metric-value" style="font-size:38px;">64<span style="font-size:16px;font-weight:500;">/65</span></div>
+      <div class="metric-sub">ก่อตั้ง ก.พ. 2567 · retention <strong>98%</strong></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px;">
+
+    <!-- Cohort Table -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-header" style="margin-bottom:14px;">
+        <div>
+          <div class="feature-tag success">📅 Cohort Analysis</div>
+          <div class="card-title">สมาชิกแบ่งตามปีที่เข้าร่วม</div>
+          <div class="card-subtitle">นับ unique members · ข้อมูลจาก 1 Year + 3 Year Membership sheets</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 8px 8px 0;text-transform:uppercase;letter-spacing:.5px;">Cohort</th>
+            <th style="text-align:right;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 8px 8px;text-transform:uppercase;letter-spacing:.5px;">เคยเข้า</th>
+            <th style="text-align:right;font-size:10.5px;font-weight:700;color:var(--success);padding:0 8px 8px;text-transform:uppercase;letter-spacing:.5px;">Active</th>
+            <th style="text-align:right;font-size:10.5px;font-weight:700;color:var(--alert);padding:0 8px 8px;text-transform:uppercase;letter-spacing:.5px;">ออก</th>
+            <th style="text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);padding:0 0 8px 8px;text-transform:uppercase;letter-spacing:.5px;">Retention</th>
+          </tr>
+        </thead>
+        <tbody id="cohort-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Contract type -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="feature-tag blue" style="margin-bottom:8px;">📋 ประเภทสัญญา</div>
+        <div class="card-title" style="margin-bottom:14px;">1-Year vs 3-Year Retention</div>
+        <div id="type-breakdown"></div>
+      </div>
+
+      <!-- Insight cards -->
+      <div class="card" style="margin-bottom:0;background:linear-gradient(135deg,var(--gold-light) 0%,#FAFAF8 100%);border-color:#EAD98A;">
+        <div class="feature-tag" style="margin-bottom:8px;">💡 เรื่องเล่าสำหรับผู้บริหาร</div>
+        <div class="card-title" style="margin-bottom:12px;">HOW Bangkok ในตัวเลข</div>
+        <div id="narrative-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Churn/Growth Timeline -->
+  <div class="card">
+    <div class="card-header" style="margin-bottom:14px;">
+      <div>
+        <div class="feature-tag alert">📈 Timeline</div>
+        <div class="card-title">สมาชิกใหม่ vs หมดสัญญา รายเดือน</div>
+        <div class="card-subtitle">ข้อมูลเดือนที่มี activity · เริ่ม พ.ค. 2568</div>
+      </div>
+    </div>
+    <canvas id="history-chart" height="80"></canvas>
+  </div>
+
+  <!-- Longevity milestones -->
+  <div class="card">
+    <div class="card-header" style="margin-bottom:14px;">
+      <div>
+        <div class="feature-tag">🏅 Milestone</div>
+        <div class="card-title">สมาชิกที่อยู่มานาน</div>
+        <div class="card-subtitle">เรียงตามวันหมดสัญญาล่าสุด — ผู้ที่ต่ออายุหลายรอบ</div>
+      </div>
+    </div>
+    <div class="disclaimer-box" style="margin-bottom:14px;">⚠️ <strong>ข้อมูลบางส่วน</strong> — tab นี้อ่านจาก Excel ที่ import ไว้ อาจไม่ครบทุก member (track ได้ 286/286+ unique) และ start date บางรายอาจ inferred จาก end date</div>
+    <div id="longevity-table"></div>
+  </div>
+
+</div>
+</div><!-- /tab-history -->
+
+<!-- CONFIG MODAL -->
+<div id="config-modal">
+  <div id="config-overlay" onclick="closeConfig()"></div>
+  <div id="config-panel">
+    <div id="config-header">
+      <div>
+        <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:3px;">⚙️ CONFIG</div>
+        <div style="font-size:16px;font-weight:800;letter-spacing:-.3px;">ตั้งค่าระบบ</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">บันทึกใน Firestore · ทุก user เห็นพร้อมกัน</div>
+      </div>
+      <button id="config-close-btn" onclick="closeConfig()">✕</button>
+    </div>
+
+    <div class="cfg-section">
+      <div class="cfg-section-title">💰 ราคาสมาชิก (บาท/ปี)</div>
+      <div class="cfg-note">ใช้คำนวณรายได้จริงใน P&amp;L และ Forecast — ถ้ายังไม่ทราบใส่ 0 ได้ก่อน</div>
+      <div class="cfg-grid">
+        <div class="cfg-field">
+          <label>New Member <span style="font-weight:400;color:var(--subtle);">default ฿420,000</span></label>
+          <input type="text" id="cfg-priceNew" oninput="cfgFmt(this)" placeholder="420,000">
+        </div>
+        <div class="cfg-field">
+          <label>Renew (ต่ออายุ) <span style="font-weight:400;color:var(--subtle);">default ฿350,000</span></label>
+          <input type="text" id="cfg-priceRenew" oninput="cfgFmt(this)" placeholder="350,000">
+        </div>
+        <div class="cfg-field">
+          <label>Distinguish / 3-Year <span style="font-weight:400;color:var(--subtle);">ยังไม่ทราบ</span></label>
+          <input type="text" id="cfg-priceDistinguish" oninput="cfgFmt(this)" placeholder="กรอกเมื่อทราบ">
+        </div>
+        <div class="cfg-field">
+          <label>Family <span style="font-weight:400;color:var(--subtle);">default ฿650,000</span></label>
+          <input type="text" id="cfg-priceFamily" oninput="cfgFmt(this)" placeholder="650,000">
+        </div>
+        <div class="cfg-field">
+          <label>Corporate <span style="font-weight:400;color:var(--subtle);">default ฿380,000</span></label>
+          <input type="text" id="cfg-priceCorporate" oninput="cfgFmt(this)" placeholder="380,000">
+        </div>
+        <div class="cfg-field">
+          <label>Fellow / Invite <span style="font-weight:400;color:var(--subtle);">ฟรี = 0</span></label>
+          <input type="text" id="cfg-priceFellow" oninput="cfgFmt(this)" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="cfg-section">
+      <div class="cfg-section-title">🎯 Threshold วันหมดอายุ</div>
+      <div class="cfg-note">กำหนดเส้นแบ่ง hot/warm/cold — กระทบตารางสมาชิก, Renewal tab, badge และ Forecast ทั้งหมด</div>
+      <div class="cfg-grid cfg-grid-3">
+        <div class="cfg-field">
+          <label>🔴 Critical / Hot <span style="font-weight:400;color:var(--subtle);">default 30</span></label>
+          <input type="number" id="cfg-thresholdCritical" class="small" min="1" max="180" step="1">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">เหลือ ≤ X วัน → แดง ต้องเร่งด่วน</div>
+        </div>
+        <div class="cfg-field">
+          <label>🟠 Soon / Warm <span style="font-weight:400;color:var(--subtle);">default 90</span></label>
+          <input type="number" id="cfg-thresholdSoon" class="small" min="1" max="365" step="1">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">เหลือ ≤ X วัน → ส้ม ควรติดตาม</div>
+        </div>
+        <div class="cfg-field">
+          <label>🟡 Watch / Cold <span style="font-weight:400;color:var(--subtle);">default 180</span></label>
+          <input type="number" id="cfg-thresholdWatch" class="small" min="1" max="730" step="1">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">เหลือ ≤ X วัน → ขึ้นใน Renewal tab</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cfg-section">
+      <div class="cfg-section-title">📊 สมมติฐาน Forecast & Renewal</div>
+      <div class="cfg-grid">
+        <div class="cfg-field">
+          <label>Renewal Rate <span style="font-weight:400;color:var(--subtle);">default 85%</span></label>
+          <input type="number" id="cfg-renewalRate" class="small" min="0" max="100" step="1">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">% สมาชิกที่คาดว่าจะต่ออายุ ใช้ใน Forecast</div>
+        </div>
+        <div class="cfg-field">
+          <label>Expired Filter เริ่มต้น <span style="font-weight:400;color:var(--subtle);">default 30 วัน</span></label>
+          <input type="number" id="cfg-expiredWindowDefault" class="small" min="1" max="365" step="1">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">แสดงสมาชิกที่หมดไปในช่วง X วัน</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="config-footer">
+      <div id="config-status"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="cfg-reset-btn" onclick="resetConfig()">↺ รีเซ็ต</button>
+        <button id="cfg-save-btn" onclick="saveConfig()">💾 บันทึก</button>
+      </div>
+    </div>
+    <div id="config-last-update"></div>
+  </div>
+</div>
+
+</div><!-- /#app-wrapper -->
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDotx7LtoUMtLdn5jiuMiRa3cH3FngTASY",
+    authDomain: "howbkkdb.firebaseapp.com",
+    projectId: "howbkkdb",
+    storageBucket: "howbkkdb.firebasestorage.app",
+    messagingSenderId: "889419611516",
+    appId: "1:889419611516:web:49a3ecd68c1bfa9f63b8f9"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  window._db = firebase.firestore();
+
+  auth.onAuthStateChanged(user => {
+    const loginScreen = document.getElementById('login-screen');
+    const appWrapper  = document.getElementById('app-wrapper');
+    const errorEl     = document.getElementById('login-error');
+
+    if (user && user.email.endsWith('@howbangkok.com')) {
+      window._authUser = user;
+      loginScreen.style.display = 'none';
+      appWrapper.style.display  = 'block';
+      document.getElementById('user-email-badge').textContent = user.email;
+      loadConfig();
+    } else {
+      if (user) {
+        auth.signOut();
+        errorEl.textContent = 'Access denied. Please sign in with your @howbangkok.com Google Workspace account.';
+        errorEl.style.display = 'block';
+      }
+      loginScreen.style.display = 'flex';
+      appWrapper.style.display  = 'none';
+    }
+  });
+
+  function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ hd: 'howbangkok.com' });
+    const errorEl = document.getElementById('login-error');
+    errorEl.style.display = 'none';
+    auth.signInWithPopup(provider).catch(err => {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+    });
+  }
+
+  function signOut() {
+    auth.signOut();
+  }
+</script>
+</body>
+</html>

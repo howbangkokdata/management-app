@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOW — Staff Hub</title>
+  <script src="supabase_key.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #111111;
+      --card:    #1c1c1c;
+      --card2:   #242424;
+      --border:  #2e2e2e;
+      --text:    #e8e8e8;
+      --text2:   #888;
+      --accent:  #c9a84c;
+      --font:    'Inter', -apple-system, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { min-height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 48px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    header {
+      padding: 40px 24px 28px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .logo { font-size: 28px; font-weight: 800; color: var(--accent); letter-spacing: 3px; margin-bottom: 6px; }
+    .greeting { font-size: 14px; color: var(--text2); }
+    .greeting strong { color: var(--text); }
+
+    /* ── GRID ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── APP CARD ── */
+    .app-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 20px;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform .15s, border-color .15s, background .15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .app-card:hover {
+      transform: translateY(-3px);
+      border-color: #444;
+      background: var(--card2);
+    }
+    .app-card:active { transform: translateY(0); }
+
+    /* Colored top bar */
+    .app-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--clr, var(--accent));
+      border-radius: 16px 16px 0 0;
+    }
+
+    .card-icon { font-size: 28px; line-height: 1; }
+    .card-name  { font-size: 15px; font-weight: 700; color: var(--text); }
+    .card-desc  { font-size: 12px; color: var(--text2); line-height: 1.5; }
+    .card-team  {
+      display: inline-block;
+      font-size: 10px; font-weight: 700;
+      color: var(--clr, var(--accent));
+      background: color-mix(in srgb, var(--clr, var(--accent)) 12%, transparent);
+      padding: 2px 8px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: .6px;
+      margin-top: auto;
+    }
+
+    /* Wide card (dashboard) */
+    .app-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 18px; }
+    .app-card.wide .card-icon { font-size: 36px; }
+    .app-card.wide .card-body { flex: 1; }
+    .app-card.wide .card-desc { margin-top: 4px; }
+    .app-card.wide .card-team { align-self: flex-start; margin-top: 0; }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-size: 10px; font-weight: 700;
+      color: var(--text2); text-transform: uppercase; letter-spacing: 1.2px;
+      max-width: 720px; margin: 24px auto 10px;
+      padding: 0 24px;
+    }
+
+    /* ── CLOCK ── */
+    .clock-bar {
+      max-width: 720px; margin: 0 auto 20px;
+      padding: 0 24px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .clock {
+      font-size: 13px; color: var(--text2);
+      background: var(--card); border: 1px solid var(--border);
+      padding: 7px 14px; border-radius: 20px;
+    }
+    .clock strong { color: var(--text); font-weight: 600; }
+    .date-badge {
+      font-size: 13px; color: var(--text2);
+      background: var(--card); border: 1px solid var(--border);
+      padding: 7px 14px; border-radius: 20px;
+    }
+
+    /* ── STATS STRIP ── */
+    .stats-strip {
+      max-width: 720px; margin: 0 auto 20px;
+      padding: 0 24px;
+      display: flex; gap: 10px;
+    }
+    .stat-chip {
+      flex: 1;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 3px;
+      min-width: 0;
+    }
+    .stat-chip .stat-val {
+      font-size: 22px; font-weight: 800; line-height: 1;
+      color: var(--text);
+    }
+    .stat-chip .stat-val.loading { color: var(--text2); font-size: 16px; }
+    .stat-chip .stat-lbl {
+      font-size: 10px; color: var(--text2);
+      text-transform: uppercase; letter-spacing: .7px; font-weight: 600;
+    }
+    .stat-chip .stat-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--clr, var(--accent));
+      display: inline-block; margin-right: 4px; flex-shrink: 0;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; margin-top: 40px;
+      font-size: 12px; color: #444;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">HOW</div>
+  <div class="greeting">สวัสดี <strong id="greeting-time">ตอนเช้า</strong> 👋 เลือกแอปที่ต้องการได้เลย</div>
+</header>
+
+<div class="clock-bar">
+  <div class="clock">🕐 <strong id="clock">--:--</strong></div>
+  <div class="date-badge" id="today-date">—</div>
+</div>
+
+<!-- Live stats strip -->
+<div class="stats-strip" id="stats-strip">
+  <div class="stat-chip" style="--clr:#22c55e">
+    <div class="stat-val loading" id="stat-active">…</div>
+    <div class="stat-lbl"><span class="stat-dot"></span>Active</div>
+  </div>
+  <div class="stat-chip" style="--clr:#06b6d4">
+    <div class="stat-val loading" id="stat-checkins">…</div>
+    <div class="stat-lbl"><span class="stat-dot"></span>Check-in วันนี้</div>
+  </div>
+  <div class="stat-chip" style="--clr:#f59e0b">
+    <div class="stat-val loading" id="stat-expiring">…</div>
+    <div class="stat-lbl"><span class="stat-dot"></span>หมดอายุ ≤30 วัน</div>
+  </div>
+</div>
+
+<!-- Executive -->
+<div class="section-label">ผู้บริหาร</div>
+<div class="grid">
+  <a href="/" class="app-card wide" style="--clr:#c9a84c">
+    <div class="card-icon">📊</div>
+    <div class="card-body">
+      <div class="card-name">Dashboard</div>
+      <div class="card-desc">ภาพรวมสมาชิก, รายได้, และ KPI ทั้งหมด</div>
+    </div>
+    <div class="card-team">Executive</div>
+  </a>
+</div>
+
+<!-- Staff Apps -->
+<div class="section-label">ทีมงาน</div>
+<div class="grid">
+
+  <a href="/staff_sales" class="app-card" style="--clr:#3b82f6">
+    <div class="card-icon">🎯</div>
+    <div class="card-name">Sales</div>
+    <div class="card-desc">Lead pipeline, ติดตาม prospect, renewal tracking</div>
+    <div class="card-team">Sales Team</div>
+  </a>
+
+  <a href="/staff_finance" class="app-card" style="--clr:#22c55e">
+    <div class="card-icon">💰</div>
+    <div class="card-name">Finance</div>
+    <div class="card-desc">Contracts, การชำระเงิน, สถานะ invoice</div>
+    <div class="card-team">Finance Team</div>
+  </a>
+
+  <a href="/staff_front" class="app-card" style="--clr:#06b6d4">
+    <div class="card-icon">🚪</div>
+    <div class="card-name">Front Desk</div>
+    <div class="card-desc">Check-in สมาชิก, ค้นหาข้อมูล, บันทึกโน้ต</div>
+    <div class="card-team">Front Desk</div>
+  </a>
+
+  <a href="/staff_ops" class="app-card" style="--clr:#8b5cf6">
+    <div class="card-icon">⚙️</div>
+    <div class="card-name">Operations</div>
+    <div class="card-desc">จัดการ Class, schedule sessions, บันทึก attendance</div>
+    <div class="card-team">Ops Team</div>
+  </a>
+
+</div>
+
+<!-- Data Management -->
+<div class="section-label">จัดการข้อมูล</div>
+<div class="grid">
+
+  <a href="/members" class="app-card" style="--clr:#f59e0b">
+    <div class="card-icon">👥</div>
+    <div class="card-name">Members</div>
+    <div class="card-desc">ดู แก้ไข เพิ่มสมาชิก — ข้อมูลครบทุก field</div>
+    <div class="card-team">Admin / Sales</div>
+  </a>
+
+  <a href="/admin" class="app-card" style="--clr:#ef4444">
+    <div class="card-icon">📥</div>
+    <div class="card-name">Import Data</div>
+    <div class="card-desc">อัปโหลด Excel เพื่อ import ข้อมูลเข้าระบบ</div>
+    <div class="card-team">Admin</div>
+  </a>
+
+</div>
+
+<footer>HOW Bangkok · Staff Hub · PIN ทุกหน้า: 2468</footer>
+
+<script>
+  const SB_URL = 'https://argdnwhxwykdwrwkojyb.supabase.co';
+  const SB_KEY = window.HowSupabaseKey ? window.HowSupabaseKey.get() : '';
+  const SB_HDR = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
+
+  async function sbGet(path) {
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/' + path, { headers: SB_HDR });
+      return r.ok ? r.json() : [];
+    } catch { return []; }
+  }
+
+  async function loadStats() {
+    const today = new Date().toISOString().slice(0,10);
+    const in30  = new Date(Date.now() + 30*864e5).toISOString().slice(0,10);
+
+    const [members, checkins] = await Promise.all([
+      sbGet('members?select=membership_status,end_date&membership_status=neq.null'),
+      sbGet(`checkins?select=id&check_in_date=eq.${today}`)
+    ]);
+
+    const active   = members.filter(m => (m.membership_status||'').toLowerCase() === 'active').length;
+    const expiring = members.filter(m => {
+      if ((m.membership_status||'').toLowerCase() !== 'active' || !m.end_date) return false;
+      return m.end_date <= in30 && m.end_date >= today;
+    }).length;
+
+    document.getElementById('stat-active').textContent   = active;
+    document.getElementById('stat-checkins').textContent = checkins.length;
+    document.getElementById('stat-expiring').textContent = expiring;
+
+    // Remove loading style
+    ['stat-active','stat-checkins','stat-expiring'].forEach(id => {
+      document.getElementById(id).classList.remove('loading');
+    });
+  }
+
+  loadStats();
+
+  const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const DAYS   = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
+
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('clock').textContent = `${h}:${m}`;
+
+    const day  = DAYS[now.getDay()];
+    const date = `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+    document.getElementById('today-date').textContent = `${day} ${date}`;
+
+    const hr = now.getHours();
+    const greet = hr < 12 ? 'ตอนเช้า' : hr < 17 ? 'ตอนบ่าย' : 'ตอนเย็น';
+    document.getElementById('greeting-time').textContent = greet;
+  }
+
+  updateClock();
+  setInterval(updateClock, 10000);
+</script>
+</body>
+</html>

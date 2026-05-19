@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOW Members</title>
+  <script src="supabase_key.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #1a1a1a;
+      --surface:  #242424;
+      --surface2: #2e2e2e;
+      --surface3: #333;
+      --border:   #3a3a3a;
+      --text:     #e8e8e8;
+      --text2:    #a0a0a0;
+      --text3:    #555;
+      --accent:   #c9a84c;
+      --green:    #22c55e;
+      --green-bg: #052e16;
+      --red:      #ef4444;
+      --red-bg:   #3a1010;
+      --amber:    #f59e0b;
+      --font:     'Inter', -apple-system, sans-serif;
+      --radius:   10px;
+      --panel-w:  460px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+    /* ── PIN ─────────────────────────────────────── */
+    #pin-screen {
+      position: fixed; inset: 0; z-index: 999; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .pin-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px 48px; text-align: center; width: 320px; }
+    .pin-logo { font-size: 26px; font-weight: 800; color: var(--accent); letter-spacing: 2px; margin-bottom: 4px; }
+    .pin-sub  { color: var(--text2); font-size: 13px; margin-bottom: 28px; }
+    .pin-dots { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
+    .pin-dot  { width: 14px; height: 14px; border-radius: 50%; background: var(--border); transition: background .15s; }
+    .pin-dot.filled { background: var(--accent); }
+    .pin-pad  { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .pin-btn  { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; height: 52px; font-size: 18px; font-weight: 600; color: var(--text); cursor: pointer; transition: background .1s; }
+    .pin-btn:hover { background: var(--surface3); }
+    .pin-btn:active { transform: scale(.95); }
+    .pin-btn.del { font-size: 14px; color: var(--text2); }
+    #pin-error { color: var(--red); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+    /* ── APP SHELL ───────────────────────────────── */
+    #app { display: none; height: 100%; flex-direction: column; }
+    #app.visible { display: flex; }
+
+    /* ── HEADER ──────────────────────────────────── */
+    .app-header {
+      height: 56px; min-height: 56px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 14px; padding: 0 18px;
+    }
+    .app-logo { font-size: 16px; font-weight: 800; color: var(--accent); letter-spacing: 1px; white-space: nowrap; }
+    .search-wrap { flex: 1; max-width: 380px; position: relative; }
+    .search-wrap input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 12px 7px 34px;
+      color: var(--text); font-size: 14px; font-family: var(--font);
+    }
+    .search-wrap input:focus { outline: none; border-color: var(--accent); }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; pointer-events: none; }
+    .header-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .result-count { font-size: 13px; color: var(--text2); white-space: nowrap; }
+    .result-count strong { color: var(--text); }
+    .btn-add { background: var(--accent); color: #000; border: none; padding: 8px 16px; border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .btn-add:hover { background: #d4b055; }
+
+    /* ── FILTER BAR ──────────────────────────────── */
+    .filter-bar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 10px 18px; display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap;
+    }
+    /* Status chips — mutually exclusive */
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+      font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      color: var(--text2); background: transparent; transition: all .15s;
+      user-select: none;
+    }
+    .chip:hover { border-color: var(--text2); color: var(--text); }
+    .chip.active-all  { background: var(--surface2); color: var(--text); border-color: var(--text2); }
+    .chip.active-active { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+    .chip.active-expired { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+    .chip.active-unknown { background: var(--surface2); color: var(--text2); border-color: #555; }
+    .chip-count { font-size: 11px; font-weight: 700; opacity: .8; }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Toggle chips — independently togglable */
+    .chip-toggle {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+      font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      color: var(--text2); background: transparent; transition: all .15s;
+      user-select: none;
+    }
+    .chip-toggle:hover { border-color: var(--text2); color: var(--text); }
+    .chip-toggle.on { background: #3a2a00; color: var(--amber); border-color: var(--amber); }
+
+    .filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+
+    /* Type + Sort selects */
+    .filter-select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 5px 10px; color: var(--text2);
+      font-size: 12px; font-family: var(--font); cursor: pointer;
+    }
+    .filter-select:focus { outline: none; border-color: var(--accent); }
+    .filter-select.active { color: var(--accent); border-color: var(--accent); }
+
+    /* ── CONTENT ─────────────────────────────────── */
+    .app-body { display: flex; flex: 1; overflow: hidden; }
+    .list-area { flex: 1; overflow-y: auto; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      position: sticky; top: 0; z-index: 2;
+      background: var(--surface2); color: var(--text2);
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px;
+      padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    thead th.sortable { cursor: pointer; }
+    thead th.sortable:hover { color: var(--text); }
+    thead th.sorted { color: var(--accent); }
+    tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .08s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody tr.selected { background: rgba(201,168,76,.07); border-left: 3px solid var(--accent); }
+    tbody tr.row-expired { opacity: .55; }
+    tbody tr.row-expired:hover { opacity: .9; }
+    tbody td { padding: 10px 14px; vertical-align: middle; }
+
+    /* Name cell */
+    .cell-nick-wrap { display: flex; align-items: center; gap: 10px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+    .cell-nick { font-weight: 600; font-size: 14px; }
+    .cell-full { color: var(--text2); font-size: 12px; margin-top: 1px; }
+    .cell-full.missing { color: var(--text3); font-style: italic; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .badge-active  { background: var(--green-bg); color: var(--green); }
+    .badge-expired { background: var(--red-bg); color: var(--red); }
+    .badge-unknown { background: var(--surface3); color: var(--text2); }
+    .badge-type    { background: var(--surface3); color: var(--text2); font-size: 11px; }
+
+    /* End date */
+    .end-ok   { color: var(--text2); font-size: 13px; }
+    .end-soon { color: var(--amber); font-size: 13px; font-weight: 600; }
+    .end-past { color: var(--red); font-size: 13px; }
+    .end-sub  { font-size: 11px; margin-top: 2px; }
+
+    /* Phone */
+    .phone-val { font-size: 13px; font-family: monospace; color: var(--text); letter-spacing: .3px; }
+    .phone-missing { font-size: 11px; color: var(--text3); }
+
+    /* ── DETAIL PANEL ────────────────────────────── */
+    .detail-panel {
+      width: var(--panel-w); min-width: var(--panel-w);
+      background: var(--surface); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+      transform: translateX(var(--panel-w)); transition: transform .2s ease;
+    }
+    .detail-panel.open { transform: translateX(0); }
+    .panel-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .panel-close { width: 30px; height: 30px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .panel-close:hover { color: var(--text); background: var(--surface3); }
+    .panel-title { font-size: 15px; font-weight: 700; flex: 1; }
+    .btn-edit { background: var(--accent); color: #000; border: none; padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-edit:hover { background: #d4b055; }
+    .panel-body { flex: 1; overflow-y: auto; padding: 18px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 2px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .tab { padding: 7px 14px; font-size: 13px; font-weight: 600; color: var(--text2); border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px; }
+    .tab.active { color: var(--accent); border-color: var(--accent); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Member hero */
+    .member-hero { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .avatar-lg { width: 52px; height: 52px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: var(--accent); border: 2px solid var(--border); flex-shrink: 0; }
+    .hero-nick { font-size: 18px; font-weight: 800; }
+    .hero-full { font-size: 13px; color: var(--text2); margin: 3px 0 8px; }
+    .hero-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+
+    /* Info grid */
+    .info-section { margin-bottom: 18px; }
+    .info-section-title { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info-field label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 3px; }
+    .info-field .val { font-size: 14px; color: var(--text); }
+    .info-field .val.empty { color: var(--text3); font-style: italic; }
+    .info-field.wide { grid-column: 1/-1; }
+
+    /* Contract card */
+    .contract-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+
+    /* Form */
+    .form-section { margin-bottom: 18px; }
+    .form-section-title { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .form-field { display: flex; flex-direction: column; gap: 4px; }
+    .form-field.wide { grid-column: 1/-1; }
+    .form-field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+    .form-field label .req { color: var(--red); }
+    .form-field input, .form-field select, .form-field textarea {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 8px 10px; color: var(--text); font-size: 13px; font-family: var(--font);
+    }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline: none; border-color: var(--accent); }
+    .form-field select option { background: var(--surface2); }
+    .form-field textarea { resize: vertical; min-height: 64px; }
+    .form-actions { display: flex; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .btn-save { flex: 1; background: var(--accent); color: #000; border: none; padding: 10px; border-radius: 7px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-save:hover { background: #d4b055; }
+    .btn-save:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-cancel { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); padding: 10px 16px; border-radius: 7px; font-size: 13px; cursor: pointer; }
+    .btn-cancel:hover { background: var(--surface3); }
+    .btn-danger { background: var(--red-bg); border: 1px solid var(--red); color: var(--red); padding: 10px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-danger:hover { background: #4a1010; }
+
+    /* Misc */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 240px; color: var(--text3); gap: 8px; }
+    .panel-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text3); gap: 8px; font-size: 14px; }
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 9999; transition: transform .2s, opacity .2s; pointer-events: none; opacity: 0; }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #toast.success { border-color: var(--green); color: var(--green); }
+    #toast.error   { border-color: var(--red); color: var(--red); }
+    .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      :root { --panel-w: 100vw; }
+      .detail-panel { position: fixed; inset: 0; z-index: 100; border: none; transform: translateX(100vw); }
+      .detail-panel.open { transform: translateX(0); }
+      thead th:nth-child(n+3) { display: none; }
+      tbody td:nth-child(n+3) { display: none; }
+      .filter-bar { overflow-x: auto; flex-wrap: nowrap; padding: 8px 12px; }
+    }
+/* QR CODE MODAL */
+.qr-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:500; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.qr-modal-overlay.hidden { display:none; }
+.qr-modal-box { background:#1c1c1c; border:1px solid #2e2e2e; border-radius:20px; padding:32px 28px 24px; text-align:center; max-width:300px; width:90%; }
+.qr-modal-nick { font-size:18px; font-weight:700; margin-bottom:4px; }
+.qr-modal-full { font-size:13px; color:#888; margin-bottom:20px; }
+.qr-code-img { width:200px; height:200px; border-radius:12px; background:#fff; display:block; margin:0 auto 20px; }
+.qr-modal-actions { display:flex; gap:10px; justify-content:center; }
+.qr-btn { padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; border:none; cursor:pointer; }
+.qr-btn-close { background:#2e2e2e; color:#e8e8e8; }
+.qr-btn-save { background:#c9a84c; color:#111; }
+  </style>
+</head>
+<body>
+
+<!-- PIN -->
+<div id="pin-screen">
+  <div class="pin-box">
+    <div class="pin-logo">HOW</div>
+    <div class="pin-sub">Members Management</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="d1"></div><div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div><div class="pin-dot" id="d4"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn" onclick="pinPress('')"></button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    </div>
+    <div id="pin-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">HOW Members</div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="ค้นหาชื่อเล่น ชื่อจริง เบอร์…" oninput="applyFilters()">
+    </div>
+    <div class="header-right">
+      <span class="result-count" id="result-count">—</span>
+      <button class="btn-add" onclick="openAddForm()">＋ เพิ่ม Member</button>
+    </div>
+  </header>
+
+  <!-- Filter bar -->
+  <div class="filter-bar" id="filter-bar">
+    <!-- Status chips -->
+    <button class="chip active-all" id="chip-all"     onclick="setStatus('all',this)">
+      <span class="chip-dot" style="background:var(--text2)"></span>
+      ทั้งหมด <span class="chip-count" id="cnt-all">—</span>
+    </button>
+    <button class="chip" id="chip-active"  onclick="setStatus('active',this)">
+      <span class="chip-dot" style="background:var(--green)"></span>
+      Active <span class="chip-count" id="cnt-active">—</span>
+    </button>
+    <button class="chip" id="chip-expired" onclick="setStatus('expired',this)">
+      <span class="chip-dot" style="background:var(--red)"></span>
+      Expired <span class="chip-count" id="cnt-expired">—</span>
+    </button>
+    <button class="chip" id="chip-unknown" onclick="setStatus('unknown',this)">
+      <span class="chip-dot" style="background:var(--text3)"></span>
+      Unknown <span class="chip-count" id="cnt-unknown">—</span>
+    </button>
+
+    <div class="filter-sep"></div>
+
+    <!-- Type dropdown -->
+    <select class="filter-select" id="type-select" onchange="applyFilters()">
+      <option value="">ทุกประเภท</option>
+      <option value="Distinguish">Distinguish</option>
+      <option value="Fellow">Fellow</option>
+      <option value="Invitation">Invitation</option>
+      <option value="Barter">Barter</option>
+      <option value="Renew">Renew</option>
+      <option value="Team">Team</option>
+      <option value="__null">ไม่ระบุ</option>
+    </select>
+
+    <div class="filter-sep"></div>
+
+    <!-- Toggle chips -->
+    <button class="chip-toggle" id="chip-nophone" onclick="toggleFilter('nophone',this)">
+      ⚠️ ไม่มีเบอร์ <span class="chip-count" id="cnt-nophone">—</span>
+    </button>
+    <button class="chip-toggle" id="chip-expiring" onclick="toggleFilter('expiring',this)">
+      ⏰ หมด ≤30วัน <span class="chip-count" id="cnt-expiring">—</span>
+    </button>
+
+    <div class="filter-sep" style="margin-left:auto"></div>
+
+    <!-- Sort -->
+    <select class="filter-select" id="sort-select" onchange="applyFilters()" title="เรียงลำดับ">
+      <option value="nickname">เรียง: ชื่อ A→Z</option>
+      <option value="end_asc">เรียง: หมดอายุ ใกล้ก่อน</option>
+      <option value="end_desc">เรียง: หมดอายุ ไกลก่อน</option>
+      <option value="status">เรียง: สถานะ</option>
+    </select>
+  </div>
+
+  <!-- Body -->
+  <div class="app-body">
+    <!-- List -->
+    <div class="list-area">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:230px">สมาชิก</th>
+            <th style="width:110px">ประเภท</th>
+            <th style="width:95px">สถานะ</th>
+            <th style="width:140px">หมดอายุ</th>
+            <th style="width:130px">เบอร์โทร</th>
+            <th style="width:80px">Sales</th>
+            <th style="width:36px"></th>
+          </tr>
+        </thead>
+        <tbody id="member-tbody">
+          <tr><td colspan="7" style="padding:40px;text-align:center"><div class="spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Detail / Form Panel -->
+    <div class="detail-panel" id="detail-panel">
+      <div class="panel-placeholder" id="panel-placeholder">
+        <div style="font-size:36px">👤</div>
+        <div>เลือก Member เพื่อดูข้อมูล</div>
+      </div>
+
+      <!-- Detail view -->
+      <div id="panel-detail" style="display:none;flex-direction:column;height:100%;overflow:hidden">
+        <div class="panel-header">
+          <button class="panel-close" onclick="closePanel()">✕</button>
+          <div class="panel-title" id="panel-detail-title">—</div>
+          <button class="btn-edit" onclick="openEditForm()">✏️ แก้ไข</button>
+        </div>
+        <div class="panel-body" id="panel-detail-body"></div>
+      </div>
+
+      <!-- Form -->
+      <div id="panel-form" style="display:none;flex-direction:column;height:100%">
+        <div class="panel-header">
+          <button class="panel-close" onclick="cancelForm()">✕</button>
+          <div class="panel-title" id="form-title">เพิ่ม Member ใหม่</div>
+        </div>
+        <div class="panel-body" style="flex:1;overflow-y:auto">
+          <form id="member-form" autocomplete="off">
+            <div class="form-section">
+              <div class="form-section-title">ข้อมูลพื้นฐาน</div>
+              <div class="form-grid">
+                <div class="form-field"><label>ชื่อเล่น <span class="req">*</span></label><input id="f-nickname" placeholder="เช่น โบ, มิ้น, อาร์ต"></div>
+                <div class="form-field"><label>ชื่อ-นามสกุล</label><input id="f-fullname" placeholder="เช่น สมชาย ใจดี"></div>
+                <div class="form-field"><label>เบอร์โทร</label><input id="f-phone" type="tel" placeholder="เช่น 081-234-5678"></div>
+                <div class="form-field"><label>LINE ID</label><input id="f-line_id" placeholder="@somchai"></div>
+                <div class="form-field"><label>อีเมล</label><input id="f-app_email" type="email" placeholder="email@gmail.com"></div>
+                <div class="form-field"><label>วันเกิด</label><input id="f-birthday" type="date"></div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">การเป็นสมาชิก</div>
+              <div class="form-grid">
+                <div class="form-field"><label>ประเภท</label>
+                  <select id="f-membership_type">
+                    <option value="">— ไม่ระบุ —</option>
+                    <option value="Distinguish">Distinguish</option>
+                    <option value="Fellow">Fellow</option>
+                    <option value="Invitation">Invitation</option>
+                    <option value="Barter">Barter</option>
+                    <option value="Renew">Renew</option>
+                    <option value="Team">Team</option>
+                  </select>
+                </div>
+                <div class="form-field"><label>สถานะ</label>
+                  <select id="f-membership_status">
+                    <option value="">— ไม่ระบุ —</option>
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </div>
+                <div class="form-field"><label>วันเริ่ม</label><input id="f-start_date" type="date"></div>
+                <div class="form-field"><label>วันหมดอายุ</label><input id="f-end_date" type="date"></div>
+                <div class="form-field"><label>สถานะการจ่าย</label>
+                  <select id="f-paid_status">
+                    <option value="">— ไม่ระบุ —</option>
+                    <option value="PAID">PAID</option>
+                    <option value="NON-PAID">NON-PAID</option>
+                    <option value="UNCLEAR">UNCLEAR</option>
+                  </select>
+                </div>
+                <div class="form-field"><label>Sales ที่ดูแล</label>
+                  <select id="f-sales_poc">
+                    <option value="">— ไม่ระบุ —</option>
+                    <option value="Mambo">Mambo</option>
+                    <option value="Ying">Ying</option>
+                    <option value="Yui">Yui</option>
+                    <option value="Tak">Tak</option>
+                    <option value="Tata">Tata</option>
+                  </select>
+                </div>
+                <div class="form-field"><label>ราคา Master (฿)</label><input id="f-price_master" type="number" placeholder="50000"></div>
+                <div class="form-field"><label>ราคา 2026 (฿)</label><input id="f-price_2026" type="number" placeholder="55000"></div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">ธุรกิจ & อื่นๆ</div>
+              <div class="form-grid">
+                <div class="form-field"><label>บริษัท</label><input id="f-company" placeholder="ABC Co., Ltd."></div>
+                <div class="form-field"><label>อุตสาหกรรม</label><input id="f-industry" placeholder="Tech, Finance…"></div>
+                <div class="form-field wide"><label>ชื่อในใบเสร็จ</label><input id="f-inv_name" placeholder="ชื่อสำหรับออกใบเสร็จ"></div>
+                <div class="form-field wide"><label>หมายเหตุ</label><textarea id="f-remark" placeholder="บันทึกเพิ่มเติม…"></textarea></div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="form-actions">
+          <button class="btn-danger" id="btn-delete" onclick="confirmDelete()" style="display:none">🗑 ลบ</button>
+          <button class="btn-cancel" onclick="cancelForm()">ยกเลิก</button>
+          <button class="btn-save" id="btn-save" onclick="saveMember()">💾 บันทึก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────
+const SB_URL = 'https://argdnwhxwykdwrwkojyb.supabase.co';
+const SB_KEY = window.HowSupabaseKey ? window.HowSupabaseKey.get() : '';
+const HDR = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+const PIN = '2468';
+
+// ─── STATE ───────────────────────────────
+let allMembers = [];
+let currentMemberDetail = null;
+let filteredMembers = [];
+let statusFilter = 'all';       // all | active | expired | unknown
+let toggleFilters = new Set();  // 'nophone' | 'expiring'
+let selectedMember = null;
+let isEdit = false;
+let editId = null;
+
+// ─── PIN ─────────────────────────────────
+let pinBuf = '';
+function pinPress(n) {
+  if (!n || pinBuf.length >= 4) return;
+  pinBuf += n;
+  updateDots();
+  if (pinBuf.length === 4) setTimeout(checkPin, 150);
+}
+function pinDel() {
+  pinBuf = pinBuf.slice(0, -1);
+  updateDots();
+  document.getElementById('pin-error').textContent = '';
+}
+function updateDots() {
+  for (let i = 1; i <= 4; i++)
+    document.getElementById(`d${i}`).classList.toggle('filled', i <= pinBuf.length);
+}
+function checkPin() {
+  if (pinBuf === PIN) {
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    loadMembers();
+  } else {
+    document.getElementById('pin-error').textContent = 'PIN ไม่ถูกต้อง';
+    pinBuf = ''; updateDots();
+  }
+}
+document.addEventListener('keydown', e => {
+  if (document.getElementById('app').classList.contains('visible')) return;
+  if (/^\d$/.test(e.key)) pinPress(e.key);
+  if (e.key === 'Backspace') pinDel();
+});
+
+// ─── DATA ────────────────────────────────
+async function loadMembers() {
+  const res = await fetch(`${SB_URL}/rest/v1/members?select=*&order=nickname.asc`, { headers: HDR });
+  allMembers = await res.json();
+  refreshCounts();   // counts always reflect ALL data
+  applyFilters();
+}
+
+// Counts are based on FULL dataset — don't change when user filters
+function refreshCounts() {
+  const all = allMembers;
+  document.getElementById('cnt-all').textContent     = all.length;
+  document.getElementById('cnt-active').textContent  = all.filter(m => m.membership_status === 'active').length;
+  document.getElementById('cnt-expired').textContent = all.filter(m => m.membership_status === 'expired').length;
+  document.getElementById('cnt-unknown').textContent = all.filter(m => !m.membership_status || m.membership_status === 'unknown').length;
+  document.getElementById('cnt-nophone').textContent = all.filter(m => !m.phone).length;
+  document.getElementById('cnt-expiring').textContent = all.filter(isExpiringSoon).length;
+}
+
+// ─── FILTER HELPERS ──────────────────────
+function isExpiringSoon(m) {
+  if (!m.end_date) return false;
+  const days = daysUntil(m.end_date);
+  return days !== null && days >= 0 && days <= 30;
+}
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.floor((d - now) / 86400000);
+}
+const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// ─── FILTER ACTIONS ──────────────────────
+function setStatus(val, el) {
+  statusFilter = val;
+  // clear active on all status chips, set new one
+  ['chip-all','chip-active','chip-expired','chip-unknown'].forEach(id => {
+    const c = document.getElementById(id);
+    c.className = 'chip';
+    if (c === el) c.className = `chip active-${val}`;
+  });
+  applyFilters();
+}
+
+function toggleFilter(key, el) {
+  if (toggleFilters.has(key)) { toggleFilters.delete(key); el.classList.remove('on'); }
+  else                         { toggleFilters.add(key);    el.classList.add('on'); }
+  applyFilters();
+}
+
+// ─── APPLY + SORT ─────────────────────────
+function applyFilters() {
+  const q    = document.getElementById('search-input').value.toLowerCase().trim();
+  const type = document.getElementById('type-select').value;
+  const sort = document.getElementById('sort-select').value;
+
+  // update type-select style
+  const ts = document.getElementById('type-select');
+  ts.classList.toggle('active', !!ts.value);
+
+  filteredMembers = allMembers.filter(m => {
+    // search: nickname, fullname, phone
+    if (q) {
+      const hay = `${m.nickname||''} ${m.fullname||''} ${m.phone||''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    // status
+    if (statusFilter !== 'all') {
+      const s = m.membership_status || 'unknown';
+      if (statusFilter === 'unknown') { if (s !== 'unknown') return false; }
+      else if (s !== statusFilter) return false;
+    }
+    // type
+    if (type) {
+      if (type === '__null') { if (m.membership_type) return false; }
+      else if (m.membership_type !== type) return false;
+    }
+    // toggles
+    if (toggleFilters.has('nophone')  && m.phone) return false;
+    if (toggleFilters.has('expiring') && !isExpiringSoon(m)) return false;
+
+    return true;
+  });
+
+  // Sort
+  filteredMembers.sort((a, b) => {
+    if (sort === 'nickname') return (a.nickname||'').localeCompare(b.nickname||'', 'th');
+    if (sort === 'end_asc')  {
+      if (!a.end_date && !b.end_date) return 0;
+      if (!a.end_date) return 1; if (!b.end_date) return -1;
+      return new Date(a.end_date) - new Date(b.end_date);
+    }
+    if (sort === 'end_desc') {
+      if (!a.end_date && !b.end_date) return 0;
+      if (!a.end_date) return 1; if (!b.end_date) return -1;
+      return new Date(b.end_date) - new Date(a.end_date);
+    }
+    if (sort === 'status') {
+      const o = { active:0, unknown:1, expired:2 };
+      return (o[a.membership_status]??1) - (o[b.membership_status]??1);
+    }
+    return 0;
+  });
+
+  // Update result count in header
+  const total = allMembers.length;
+  const shown = filteredMembers.length;
+  document.getElementById('result-count').innerHTML =
+    shown === total
+      ? `<strong>${total}</strong> สมาชิก`
+      : `<strong>${shown}</strong> / ${total} สมาชิก`;
+
+  renderList();
+}
+
+// ─── RENDER LIST ─────────────────────────
+function renderList() {
+  const tbody = document.getElementById('member-tbody');
+  if (!filteredMembers.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div style="font-size:32px">🔍</div><div>ไม่พบสมาชิกที่ค้นหา</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filteredMembers.map(m => {
+    const init  = (m.nickname || '?')[0].toUpperCase();
+    const selCls = selectedMember?.id === m.id ? 'selected' : '';
+    const expCls = m.membership_status === 'expired' ? 'row-expired' : '';
+
+    // status badge
+    const sBadge = m.membership_status === 'active'
+      ? `<span class="badge badge-active">Active</span>`
+      : m.membership_status === 'expired'
+        ? `<span class="badge badge-expired">Expired</span>`
+        : `<span class="badge badge-unknown">Unknown</span>`;
+
+    // type badge
+    const tBadge = m.membership_type
+      ? `<span class="badge badge-type">${esc(m.membership_type)}</span>`
+      : `<span style="color:var(--text3);font-size:11px">—</span>`;
+
+    // end date
+    let endHTML = `<span style="color:var(--text3)">—</span>`;
+    if (m.end_date) {
+      const days = daysUntil(m.end_date);
+      if (days < 0)       endHTML = `<div class="end-past">${fmtDate(m.end_date)}<div class="end-sub">หมดแล้ว ${Math.abs(days)} วัน</div></div>`;
+      else if (days <= 30) endHTML = `<div class="end-soon">${fmtDate(m.end_date)}<div class="end-sub">⏰ อีก ${days} วัน</div></div>`;
+      else                 endHTML = `<div class="end-ok">${fmtDate(m.end_date)}</div>`;
+    }
+
+    // phone
+    const phoneHTML = m.phone
+      ? `<span class="phone-val">${esc(m.phone)}</span>`
+      : `<span class="phone-missing">⚠️ ไม่มีเบอร์</span>`;
+
+    return `<tr class="${selCls} ${expCls}" onclick="selectMember('${m.id}')">
+      <td>
+        <div class="cell-nick-wrap">
+          <div class="avatar">${init}</div>
+          <div>
+            <div class="cell-nick">${esc(m.nickname || '—')}</div>
+            <div class="cell-full ${!m.fullname ? 'missing' : ''}">${esc(m.fullname || 'ไม่มีชื่อจริง')}</div>
+          </div>
+        </div>
+      </td>
+      <td>${tBadge}</td>
+      <td>${sBadge}</td>
+      <td>${endHTML}</td>
+      <td>${phoneHTML}</td>
+      <td style="font-size:12px;color:var(--text2)">${esc(m.sales_poc || '—')}</td>
+      <td style="color:var(--text3);font-size:15px">›</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── DETAIL PANEL ────────────────────────
+async function selectMember(id) {
+  selectedMember = allMembers.find(m => m.id === id);
+  if (!selectedMember) return;
+  renderList();
+  await showDetail(selectedMember);
+}
+
+async function showDetail(m) {
+  currentMemberDetail = m;
+  document.getElementById('panel-placeholder').style.display = 'none';
+  document.getElementById('panel-form').style.display = 'none';
+  const detEl = document.getElementById('panel-detail');
+  detEl.style.display = 'flex';
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('panel-detail-title').textContent = m.nickname || '—';
+
+  // lazy load contracts + notes
+  const [cRes, nRes] = await Promise.all([
+    fetch(`${SB_URL}/rest/v1/contracts?member_id=eq.${m.id}&select=*&order=created_at.desc`, { headers: HDR }),
+    fetch(`${SB_URL}/rest/v1/member_notes?member_id=eq.${m.id}&select=*&order=created_at.desc&limit=10`, { headers: HDR })
+  ]);
+  const contracts = await cRes.json();
+  const notes     = await nRes.json();
+
+  const sBadge = m.membership_status === 'active'
+    ? `<span class="badge badge-active">Active</span>`
+    : m.membership_status === 'expired'
+      ? `<span class="badge badge-expired">Expired</span>`
+      : `<span class="badge badge-unknown">Unknown</span>`;
+
+  document.getElementById('panel-detail-body').innerHTML = `
+    <div class="member-hero">
+      <div class="avatar-lg">${(m.nickname||'?')[0].toUpperCase()}</div>
+      <div>
+        <div class="hero-nick">${esc(m.nickname||'—')}</div>
+        <div class="hero-full">${esc(m.fullname||'ไม่มีชื่อจริง')}</div>
+        <div class="hero-badges">
+          ${sBadge}
+          ${m.membership_type ? `<span class="badge badge-type">${esc(m.membership_type)}</span>` : ''}
+          ${!m.phone ? `<span class="badge" style="background:#3a2a00;color:var(--amber)">⚠️ ไม่มีเบอร์</span>` : ''}
+        </div>
+        <button onclick="openQRModal(currentMemberDetail)" style="margin-top:10px;padding:6px 14px;background:#2e2e2e;border:1px solid #3a3a3a;border-radius:8px;color:#c9a84c;font-size:12px;font-weight:600;cursor:pointer;">📱 QR Check-in</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('info',this)">ข้อมูล</div>
+      <div class="tab" onclick="switchTab('contracts',this)">สัญญา (${contracts.length})</div>
+      <div class="tab" onclick="switchTab('notes',this)">บันทึก (${notes.length})</div>
+    </div>
+    <div id="tab-info" class="tab-content active">
+      <div class="info-section">
+        <div class="info-section-title">ติดต่อ</div>
+        <div class="info-grid">
+          ${iF('เบอร์โทร', m.phone)}
+          ${iF('LINE ID',  m.line_id)}
+          ${iF('อีเมล',    m.app_email)}
+          ${iF('วันเกิด',  m.birthday ? fmtDate(m.birthday) : null)}
+        </div>
+      </div>
+      <div class="info-section">
+        <div class="info-section-title">สมาชิก</div>
+        <div class="info-grid">
+          ${iF('ประเภท',      m.membership_type)}
+          ${iF('สถานะ',       m.membership_status)}
+          ${iF('วันเริ่ม',    fmtDate(m.start_date))}
+          ${iF('วันหมด',      fmtDate(m.end_date))}
+          ${iF('การชำระ',     m.paid_status)}
+          ${iF('Sales',       m.sales_poc)}
+          ${iF('ราคา Master', m.price_master ? `฿${Number(m.price_master).toLocaleString()}` : null)}
+          ${iF('ราคา 2026',   m.price_2026   ? `฿${Number(m.price_2026).toLocaleString()}`   : null)}
+        </div>
+      </div>
+      ${(m.company||m.industry) ? `<div class="info-section">
+        <div class="info-section-title">ธุรกิจ</div>
+        <div class="info-grid">${iF('บริษัท',m.company)}${iF('อุตสาหกรรม',m.industry)}</div>
+      </div>` : ''}
+      ${m.remark ? `<div class="info-section"><div class="info-section-title">หมายเหตุ</div><div style="font-size:13px;color:var(--text2);line-height:1.6">${esc(m.remark)}</div></div>` : ''}
+    </div>
+    <div id="tab-contracts" class="tab-content">
+      ${contracts.length
+        ? contracts.map(c => `<div class="contract-card">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <div style="font-weight:600">${esc(c.contract_type||'Contract')}</div>
+              ${c.value ? `<div style="font-size:16px;font-weight:700;color:var(--accent)">฿${Number(c.value).toLocaleString()}</div>` : ''}
+            </div>
+            <div style="font-size:12px;color:var(--text2)">${fmtDate(c.start_date)} → ${fmtDate(c.end_date)}</div>
+          </div>`).join('')
+        : `<div class="empty-state" style="height:100px"><div>📋</div><div style="font-size:13px">ยังไม่มีสัญญา</div></div>`}
+    </div>
+    <div id="tab-notes" class="tab-content">
+      ${notes.length
+        ? notes.map(n => `<div class="contract-card">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">${esc(n.created_by||'—')} · ${fmtDate(n.created_at)}</div>
+            <div style="font-size:13px">${esc(n.note)}</div>
+          </div>`).join('')
+        : `<div class="empty-state" style="height:100px"><div>📝</div><div style="font-size:13px">ยังไม่มีบันทึก</div></div>`}
+    </div>
+  `;
+}
+
+function iF(label, value) {
+  return `<div class="info-field">
+    <label>${label}</label>
+    <div class="val ${!value?'empty':''}">${value ? esc(String(value)) : '—'}</div>
+  </div>`;
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('#panel-detail-body .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#panel-detail-body .tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+function closePanel() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('panel-detail').style.display = 'none';
+  document.getElementById('panel-form').style.display = 'none';
+  document.getElementById('panel-placeholder').style.display = 'flex';
+  selectedMember = null;
+  renderList();
+}
+
+// ─── FORM ────────────────────────────────
+function openAddForm() {
+  isEdit = false; editId = null;
+  document.getElementById('form-title').textContent = 'เพิ่ม Member ใหม่';
+  document.getElementById('btn-delete').style.display = 'none';
+  clearForm();
+  showForm();
+}
+function openEditForm() {
+  if (!selectedMember) return;
+  isEdit = true; editId = selectedMember.id;
+  document.getElementById('form-title').textContent = `แก้ไข: ${selectedMember.nickname}`;
+  document.getElementById('btn-delete').style.display = 'block';
+  fillForm(selectedMember);
+  showForm();
+}
+function showForm() {
+  document.getElementById('panel-placeholder').style.display = 'none';
+  document.getElementById('panel-detail').style.display = 'none';
+  document.getElementById('panel-form').style.display = 'flex';
+  document.getElementById('detail-panel').classList.add('open');
+}
+function cancelForm() {
+  document.getElementById('panel-form').style.display = 'none';
+  if (selectedMember) { document.getElementById('panel-detail').style.display = 'flex'; }
+  else { document.getElementById('panel-placeholder').style.display = 'flex'; document.getElementById('detail-panel').classList.remove('open'); }
+}
+const FORM_FIELDS = [
+  {id:'f-nickname',key:'nickname'}, {id:'f-fullname',key:'fullname'},
+  {id:'f-phone',key:'phone'}, {id:'f-line_id',key:'line_id'},
+  {id:'f-app_email',key:'app_email'}, {id:'f-birthday',key:'birthday',isDate:true},
+  {id:'f-membership_type',key:'membership_type'}, {id:'f-membership_status',key:'membership_status'},
+  {id:'f-start_date',key:'start_date',isDate:true}, {id:'f-end_date',key:'end_date',isDate:true},
+  {id:'f-paid_status',key:'paid_status'}, {id:'f-sales_poc',key:'sales_poc'},
+  {id:'f-price_master',key:'price_master',isNum:true}, {id:'f-price_2026',key:'price_2026',isNum:true},
+  {id:'f-company',key:'company'}, {id:'f-industry',key:'industry'},
+  {id:'f-inv_name',key:'inv_name'}, {id:'f-remark',key:'remark'}
+];
+function clearForm() { FORM_FIELDS.forEach(f => { const el = document.getElementById(f.id); if (el) el.value = ''; }); }
+function fillForm(m) { FORM_FIELDS.forEach(f => { const el = document.getElementById(f.id); if (el) el.value = m[f.key] ?? ''; }); }
+
+async function saveMember() {
+  const nick = document.getElementById('f-nickname').value.trim();
+  if (!nick) { showToast('กรอกชื่อเล่นก่อนนะ', 'error'); return; }
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+
+  const payload = {};
+  FORM_FIELDS.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (!el) return;
+    const v = el.value.trim();
+    payload[f.key] = f.isNum ? (v ? parseFloat(v) : null) : (v || null);
+  });
+
+  try {
+    const url = isEdit
+      ? `${SB_URL}/rest/v1/members?id=eq.${editId}`
+      : `${SB_URL}/rest/v1/members`;
+    const res = await fetch(url, {
+      method: isEdit ? 'PATCH' : 'POST',
+      headers: HDR,
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'บันทึกไม่สำเร็จ'); }
+    const [saved] = await res.json();
+    showToast(`✅ ${isEdit ? 'แก้ไข' : 'เพิ่ม'} ${saved.nickname} แล้ว`, 'success');
+    await loadMembers();
+    selectedMember = allMembers.find(m => m.id === saved.id) || null;
+    if (selectedMember) await showDetail(selectedMember);
+    else cancelForm();
+  } catch(e) { showToast('❌ ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = '💾 บันทึก'; }
+}
+
+async function confirmDelete() {
+  const m = allMembers.find(x => x.id === editId);
+  if (!confirm(`ลบ ${m?.nickname || 'member'} ออกจากระบบ?\n\nไม่สามารถกู้คืนได้`)) return;
+  const res = await fetch(`${SB_URL}/rest/v1/members?id=eq.${editId}`, { method: 'DELETE', headers: HDR });
+  if (res.ok) { showToast('🗑 ลบเรียบร้อย', 'success'); closePanel(); await loadMembers(); }
+  else { const e = await res.json(); showToast('❌ ' + (e.message||'ลบไม่สำเร็จ'), 'error'); }
+}
+
+// ─── UTILS ───────────────────────────────
+// ─── QR CODE MODAL ───────────────────────
+function openQRModal(m) {
+  if (!m) return;
+  const url = encodeURIComponent(`https://howbkkdb.web.app/staff_front?checkin=${m.id}`);
+  const imgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=12&color=111111&bgcolor=ffffff&data=${url}`;
+  document.getElementById('qr-nick').textContent = m.nickname || '—';
+  document.getElementById('qr-full').textContent = m.fullname || '';
+  document.getElementById('qr-img').src = imgSrc;
+  document.getElementById('qr-overlay').classList.remove('hidden');
+}
+
+function closeQRModal() {
+  document.getElementById('qr-overlay').classList.add('hidden');
+}
+
+function saveQRImage() {
+  const img = document.getElementById('qr-img');
+  const nick = document.getElementById('qr-nick').textContent;
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = `HOW_QR_${nick}.png`;
+  a.target = '_blank';
+  a.click();
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `show ${type}`;
+  setTimeout(() => t.className = '', 3000);
+}
+</script>
+<!-- QR Code Modal -->
+<div class="qr-modal-overlay hidden" id="qr-overlay" onclick="if(event.target===this)closeQRModal()">
+  <div class="qr-modal-box">
+    <div class="qr-modal-nick" id="qr-nick">—</div>
+    <div class="qr-modal-full" id="qr-full">—</div>
+    <img id="qr-img" class="qr-code-img" src="" alt="QR Code">
+    <div class="qr-modal-actions">
+      <button class="qr-btn qr-btn-close" onclick="closeQRModal()">ปิด</button>
+      <button class="qr-btn qr-btn-save" onclick="saveQRImage()">💾 บันทึกรูป</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

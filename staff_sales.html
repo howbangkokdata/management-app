@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HOW Sales — Staff App</title>
+  <script src="supabase_key.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS — HOW Dark Theme
+    ═══════════════════════════════════════════ */
+    :root {
+      --bg:       #1a1a1a;
+      --surface:  #242424;
+      --surface2: #2e2e2e;
+      --border:   #3a3a3a;
+      --text:     #e8e8e8;
+      --text2:    #a0a0a0;
+      --accent:   #c9a84c;
+      --accent-dim:#a07830;
+      --accent-bg: rgba(201,168,76,0.12);
+      --success:  #1C7048;
+      --success-light: rgba(28,112,72,0.15);
+      --danger:   #c0392b;
+      --danger-light: rgba(192,57,43,0.15);
+      --warn:     #e67e22;
+      --warn-light: rgba(230,126,34,0.15);
+      --info:     #2254a0;
+      --info-light: rgba(34,84,160,0.15);
+      --blue:     #3a7bd5;
+      --blue-light: rgba(58,123,213,0.15);
+      --font:     'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius:   12px;
+      --radius-sm:8px;
+      --nav-h:    64px;
+      --header-h: 56px;
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100%;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    button { font-family: var(--font); cursor: pointer; border: none; background: none; color: inherit; }
+    input, select, textarea { font-family: var(--font); }
+    a { color: inherit; text-decoration: none; }
+
+    /* ═══════════════════════════════════════════
+       APP SHELL
+    ═══════════════════════════════════════════ */
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+      background: var(--bg);
+    }
+
+    /* ═══════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════ */
+    .app-header {
+      position: fixed;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 500; color: var(--accent);
+      padding: 6px 0;
+    }
+    .back-btn svg { flex-shrink: 0; }
+    .header-brand {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .header-logo {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #1a1a1a;
+      letter-spacing: 0.5px;
+    }
+    .header-title {
+      font-size: 16px; font-weight: 700; color: var(--text);
+      line-height: 1.2;
+    }
+    .header-sub {
+      font-size: 10px; color: var(--text2); letter-spacing: 0.5px;
+    }
+    .header-action {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .header-back-link {
+      font-size: 11px; color: var(--text2);
+      padding: 5px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+
+    /* ═══════════════════════════════════════════
+       PAGE CONTENT
+    ═══════════════════════════════════════════ */
+    .page {
+      display: none;
+      padding-top: var(--header-h);
+      padding-bottom: calc(var(--nav-h) + 16px);
+      min-height: 100vh;
+    }
+    .page.active { display: block; }
+
+    /* ═══════════════════════════════════════════
+       BOTTOM NAV
+    ═══════════════════════════════════════════ */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      height: var(--nav-h);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px;
+      padding: 8px 0;
+      font-size: 10px; font-weight: 500;
+      color: var(--text2);
+      transition: color 0.15s;
+    }
+    .nav-item.active { color: var(--accent); }
+    .nav-item svg { width: 22px; height: 22px; }
+    .nav-item.fab-item {
+      flex: 0 0 60px;
+    }
+    .fab-btn {
+      width: 48px; height: 48px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #1a1a1a;
+      box-shadow: 0 4px 16px rgba(201,168,76,0.4);
+      font-size: 24px;
+      font-weight: 300;
+      line-height: 1;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .fab-btn:active { transform: scale(0.93); box-shadow: 0 2px 8px rgba(201,168,76,0.3); }
+
+    /* ═══════════════════════════════════════════
+       SECTION
+    ═══════════════════════════════════════════ */
+    .section { padding: 16px; }
+    .section + .section { padding-top: 0; }
+    .section-title {
+      font-size: 12px; font-weight: 700;
+      color: var(--text2);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .section-count {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+
+    /* ═══════════════════════════════════════════
+       STATS ROW
+    ═══════════════════════════════════════════ */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 16px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 22px; font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 9px; font-weight: 500;
+      color: var(--text2);
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+    .stat-card.danger .stat-number { color: var(--danger); }
+    .stat-card.warn .stat-number { color: var(--warn); }
+    .stat-card.success .stat-number { color: #2ecc71; }
+
+    /* ═══════════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card:active { background: var(--surface2); border-color: var(--accent); }
+    .card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .card-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .card-nick { font-size: 12px; color: var(--text2); margin-left: 4px; font-weight: 400; }
+    .card-meta { font-size: 12px; color: var(--text2); margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .card-meta-item { display: flex; align-items: center; gap: 3px; }
+
+    /* ═══════════════════════════════════════════
+       BADGES
+    ═══════════════════════════════════════════ */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .badge-green  { background: var(--success-light); color: #2ecc71; border: 1px solid rgba(46,204,113,0.2); }
+    .badge-gold   { background: var(--accent-bg); color: var(--accent); border: 1px solid rgba(201,168,76,0.25); }
+    .badge-red    { background: var(--danger-light); color: #e74c3c; border: 1px solid rgba(192,57,43,0.25); }
+    .badge-orange { background: var(--warn-light); color: var(--warn); border: 1px solid rgba(230,126,34,0.25); }
+    .badge-blue   { background: var(--blue-light); color: var(--blue); border: 1px solid rgba(58,123,213,0.25); }
+    .badge-gray   { background: rgba(160,160,160,0.12); color: var(--text2); border: 1px solid rgba(160,160,160,0.2); }
+
+    .temp-hot  { color: #e74c3c; }
+    .temp-warm { color: var(--warn); }
+    .temp-cold { color: var(--blue); }
+
+    /* ═══════════════════════════════════════════
+       SEARCH & FILTER
+    ═══════════════════════════════════════════ */
+    .search-wrap {
+      padding: 12px 16px 8px;
+      position: sticky;
+      top: var(--header-h);
+      background: var(--bg);
+      z-index: 50;
+    }
+    .search-input-wrap {
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px 10px 36px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text2); }
+    .search-icon {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--text2); pointer-events: none;
+    }
+
+    .filter-chips {
+      display: flex; gap: 6px;
+      padding: 0 16px 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      transition: all 0.15s;
+    }
+    .chip.active {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ═══════════════════════════════════════════
+       EMPTY STATE
+    ═══════════════════════════════════════════ */
+    .empty-state {
+      text-align: center;
+      padding: 40px 24px;
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .empty-sub { font-size: 13px; color: var(--text2); }
+
+    /* ═══════════════════════════════════════════
+       SKELETON LOADER
+    ═══════════════════════════════════════════ */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+    .skel-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 8px;
+    }
+    .skel-line { height: 14px; margin-bottom: 8px; }
+    .skel-line.w80 { width: 80%; }
+    .skel-line.w60 { width: 60%; }
+    .skel-line.w40 { width: 40%; }
+
+    /* ═══════════════════════════════════════════
+       PIPELINE STAGES
+    ═══════════════════════════════════════════ */
+    .pipeline-wrap {
+      overflow-x: auto;
+      padding: 0 16px 8px;
+      scrollbar-width: none;
+    }
+    .pipeline-wrap::-webkit-scrollbar { display: none; }
+    .pipeline-stages {
+      display: flex; gap: 6px;
+      min-width: max-content;
+    }
+    .stage-item {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 4px; cursor: pointer;
+    }
+    .stage-dot {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+    .stage-dot.done { background: var(--success); border-color: var(--success); }
+    .stage-dot.active { border-color: var(--accent); background: var(--accent-bg); }
+    .stage-dot.na { opacity: 0.3; }
+    .stage-label { font-size: 9px; font-weight: 500; color: var(--text2); text-align: center; max-width: 50px; line-height: 1.2; }
+
+    /* ═══════════════════════════════════════════
+       TIMELINE
+    ═══════════════════════════════════════════ */
+    .timeline { position: relative; }
+    .timeline-item {
+      display: flex; gap: 12px;
+      padding: 0 0 16px;
+      position: relative;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 15px; top: 28px; bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-dot {
+      width: 30px; height: 30px; flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      z-index: 1;
+    }
+    .timeline-body { flex: 1; }
+    .timeline-date { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+    .timeline-summary { font-size: 13px; color: var(--text); }
+    .timeline-meta { font-size: 11px; color: var(--text2); margin-top: 3px; display: flex; gap: 8px; }
+
+    /* ═══════════════════════════════════════════
+       FORMS
+    ═══════════════════════════════════════════ */
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px; font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .form-label .req { color: var(--accent); margin-left: 2px; }
+    .form-control {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-control:focus { border-color: var(--accent); }
+    .form-control::placeholder { color: var(--text2); }
+    .form-control[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.8);
+    }
+    textarea.form-control { resize: vertical; min-height: 80px; }
+    select.form-control {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-error { font-size: 11px; color: #e74c3c; margin-top: 4px; }
+
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .toggle-label { font-size: 14px; font-weight: 500; color: var(--text); }
+    .toggle-sub { font-size: 12px; color: var(--text2); }
+    .toggle {
+      position: relative;
+      width: 44px; height: 26px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: var(--surface2);
+      border-radius: 13px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--text2);
+      top: 2px; left: 2px;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+    .toggle input:checked + .toggle-track::after { transform: translateX(18px); background: #1a1a1a; }
+
+    /* ═══════════════════════════════════════════
+       BUTTONS
+    ═══════════════════════════════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 11px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 600;
+      transition: all 0.15s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #1a1a1a;
+      width: 100%;
+    }
+    .btn-primary:active { background: var(--accent-dim); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 100%;
+    }
+    .btn-secondary:active { background: var(--border); }
+    .btn-ghost {
+      color: var(--accent);
+      padding: 8px 0;
+      font-size: 13px;
+    }
+    .btn-danger {
+      background: var(--danger-light);
+      color: #e74c3c;
+      border: 1px solid rgba(192,57,43,0.3);
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(26,26,26,0.3);
+      border-top-color: #1a1a1a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .btn-primary.loading .spinner { display: inline-block; }
+    .btn-primary.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══════════════════════════════════════════
+       DETAIL SECTIONS
+    ═══════════════════════════════════════════ */
+    .detail-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin: 0 16px 12px;
+      overflow: hidden;
+    }
+    .detail-section-header {
+      padding: 12px 14px;
+      font-size: 12px; font-weight: 700;
+      color: var(--text2);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .detail-row {
+      display: flex;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key { font-size: 12px; color: var(--text2); width: 80px; flex-shrink: 0; padding-top: 1px; }
+    .detail-val { font-size: 13px; color: var(--text); flex: 1; word-break: break-word; }
+
+    /* ═══════════════════════════════════════════
+       DAYS BADGE
+    ═══════════════════════════════════════════ */
+    .days-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .days-red  { background: var(--danger-light); color: #e74c3c; }
+    .days-warn { background: var(--warn-light); color: var(--warn); }
+    .days-green{ background: var(--success-light); color: #2ecc71; }
+
+    /* ═══════════════════════════════════════════
+       SCORE DOTS
+    ═══════════════════════════════════════════ */
+    .score-dots { display: flex; gap: 3px; align-items: center; }
+    .score-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .score-dot.filled { background: var(--accent); }
+    .score-dot.half { background: var(--accent-dim); }
+
+    /* ═══════════════════════════════════════════
+       SLIDE PANEL
+    ═══════════════════════════════════════════ */
+    .slide-panel-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      backdrop-filter: blur(2px);
+    }
+    .slide-panel-overlay.active { display: block; }
+    .slide-panel {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      width: 100%; max-width: 480px;
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      z-index: 201;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .slide-panel.active { transform: translateX(-50%) translateY(0); }
+    .slide-panel-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 4px;
+      flex-shrink: 0;
+    }
+    .slide-panel-title {
+      font-size: 15px; font-weight: 700;
+      padding: 8px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .slide-panel-body {
+      overflow-y: auto;
+      padding: 16px 20px;
+      flex: 1;
+    }
+
+    /* ═══════════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════════ */
+    #toast-container {
+      position: fixed;
+      top: calc(var(--header-h) + 8px);
+      left: 50%; transform: translateX(-50%);
+      z-index: 999;
+      display: flex; flex-direction: column; gap: 6px;
+      width: calc(100% - 32px);
+      max-width: 448px;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      animation: slideDown 0.25s ease;
+      pointer-events: auto;
+    }
+    .toast-success { background: var(--success); color: #fff; }
+    .toast-error { background: var(--danger); color: #fff; }
+    .toast-warn { background: var(--warn); color: #fff; }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════════ */
+    .divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+    /* ═══════════════════════════════════════════
+       INLINE LOG FORM SECTION
+    ═══════════════════════════════════════════ */
+    .log-form-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-top: 12px;
+    }
+    .log-form-title {
+      font-size: 13px; font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    /* ═══════════════════════════════════════════
+       RENEWAL FILTER TABS
+    ═══════════════════════════════════════════ */
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 8px;
+      position: sticky;
+      top: var(--header-h);
+      z-index: 50;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-bar-item {
+      padding: 12px 14px;
+      font-size: 12px; font-weight: 600;
+      color: var(--text2);
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-bar-item.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ═══════════════════════════════════════════
+       PROFILE HEADER (Detail pages)
+    ═══════════════════════════════════════════ */
+    .profile-header {
+      padding: 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-name { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1.2; }
+    .profile-nick { font-size: 14px; color: var(--text2); margin-top: 2px; }
+    .profile-badges { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+    /* ═══════════════════════════════════════════
+       SORT BAR
+    ═══════════════════════════════════════════ */
+    .sort-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px;
+      font-size: 12px; color: var(--text2);
+    }
+    .sort-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 24px 4px 10px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    /* HOME special */
+    .home-welcome {
+      padding: 16px 16px 0;
+    }
+    .home-greeting { font-size: 18px; font-weight: 700; color: var(--text); }
+    .home-date { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE (desktop fallback)
+    ═══════════════════════════════════════════ */
+    @media (min-width: 480px) {
+      .app-header, .bottom-nav { border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ TOAST CONTAINER ═══ -->
+  <div id="toast-container"></div>
+
+  <!-- ═══ APP HEADER ═══ -->
+  <header class="app-header" id="app-header">
+    <div class="header-left" id="header-left">
+      <div class="header-brand">
+        <div class="header-logo">HOW</div>
+        <div>
+          <div class="header-title">Sales</div>
+          <div class="header-sub">HOW Bangkok</div>
+        </div>
+      </div>
+    </div>
+    <div class="header-action">
+      <a href="index.html" class="header-back-link">← Dashboard</a>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE 1: HOME
+  ═══════════════════════════════════════════════ -->
+  <div id="page-home" class="page active">
+    <div class="home-welcome">
+      <div class="home-greeting" id="home-greeting">สวัสดี 👋</div>
+      <div class="home-date" id="home-date"></div>
+    </div>
+
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card">
+        <div class="stat-number skeleton" style="width:40px;height:28px;margin:0 auto 4px;" id="stat-all">–</div>
+        <div class="stat-label">Leads ทั้งหมด</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-number" id="stat-hot">–</div>
+        <div class="stat-label">🔥 Hot Leads</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-number" id="stat-expiring">–</div>
+        <div class="stat-label">⚠️ หมดอายุเดือนนี้</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-number" id="stat-followup">–</div>
+        <div class="stat-label">📅 Follow Up วันนี้</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🔥 Follow Up วันนี้ <span class="section-count" id="followup-count">0</span></div>
+      <div id="followup-list"><div class="skel-card"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">⚠️ Expiring Soon <span class="section-count" id="expiring-count">0</span></div>
+      <div id="expiring-list"><div class="skel-card"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE 2: LEAD LIST
+  ═══════════════════════════════════════════════ -->
+  <div id="page-leads" class="page">
+    <div class="search-wrap">
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" class="search-input" id="lead-search" placeholder="ค้นหา ชื่อ / บริษัท..." autocomplete="off">
+      </div>
+    </div>
+    <div class="filter-chips" id="lead-filter-chips">
+      <div class="chip active" data-filter="all">All</div>
+      <div class="chip" data-filter="hot">🔥 สนใจมาก</div>
+      <div class="chip" data-filter="warm">🌤 สนใจพอควร</div>
+      <div class="chip" data-filter="cold">❄️ ยังไม่แน่ใจ</div>
+      <div class="chip" data-filter="paid">✅ Paid</div>
+      <div class="chip" data-filter="not_interested">❌ ไม่สนใจ</div>
+    </div>
+    <div class="section" style="padding-top:4px;">
+      <div id="leads-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE 3: LEAD DETAIL
+  ═══════════════════════════════════════════════ -->
+  <div id="page-lead-detail" class="page">
+    <div class="profile-header" id="lead-detail-header"></div>
+    <div id="lead-detail-body"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE 4: ADD / EDIT LEAD
+  ═══════════════════════════════════════════════ -->
+  <div id="page-lead-form" class="page">
+    <div class="section">
+      <form id="lead-form" novalidate>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ชื่อเล่น <span class="req">*</span></label>
+            <input type="text" class="form-control" id="f-nickname" placeholder="เช่น ต้น, นุ่น, โบ" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อ-นามสกุล</label>
+            <input type="text" class="form-control" id="f-fullname" placeholder="เช่น สมชาย ใจดี">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">เบอร์โทร</label>
+            <input type="tel" class="form-control" id="f-phone" placeholder="เช่น 081-234-5678">
+          </div>
+          <div class="form-group">
+            <label class="form-label">LINE ID</label>
+            <input type="text" class="form-control" id="f-line" placeholder="เช่น @howfan">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" id="f-email" placeholder="เช่น name@company.com">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">บริษัท</label>
+            <input type="text" class="form-control" id="f-company" placeholder="เช่น บริษัท XYZ จำกัด">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ตำแหน่ง</label>
+            <input type="text" class="form-control" id="f-position" placeholder="เช่น ผู้จัดการ, กรรมการ">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">รู้จัก HOW จากไหน</label>
+            <select class="form-control" id="f-source">
+              <option value="">-- เลือก --</option>
+              <option value="friends">เพื่อนแนะนำ</option>
+              <option value="refer">สมาชิกแนะนำ</option>
+              <option value="facebook">Facebook / IG</option>
+              <option value="website">Website</option>
+              <option value="open_house">Open House</option>
+              <option value="walk_in">Walk-in</option>
+              <option value="other">อื่นๆ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ความสนใจ</label>
+            <select class="form-control" id="f-temp">
+              <option value="hot">🔥 สนใจมาก</option>
+              <option value="warm">🌤 สนใจพอควร</option>
+              <option value="cold">❄️ ยังไม่แน่ใจ</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">เซลล์ที่รับผิดชอบ</label>
+            <select class="form-control" id="f-poc"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">สถานะ</label>
+            <select class="form-control" id="f-status">
+              <option value="new">ใหม่</option>
+              <option value="line">ทัก LINE แล้ว</option>
+              <option value="considering">กำลังพิจารณา</option>
+              <option value="appointment">นัดเยี่ยมชม</option>
+              <option value="billing">รอชำระเงิน</option>
+              <option value="paid">จ่ายแล้ว ✅</option>
+              <option value="not_interested">ไม่สนใจ</option>
+            </select>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">เคยเยี่ยมชมแล้ว</div>
+            <div class="toggle-sub">Visited HOW Bangkok</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="f-visited">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="form-group" style="margin-top:14px;">
+          <label class="form-label">หมายเหตุ</label>
+          <textarea class="form-control" id="f-remark" rows="3" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+        </div>
+        <div style="margin-top:8px;">
+          <button type="submit" class="btn btn-primary" id="lead-form-save">
+            <div class="spinner"></div>
+            <span class="btn-text">💾 บันทึก</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE 5: RENEWAL PIPELINE
+  ═══════════════════════════════════════════════ -->
+  <div id="page-renewal" class="page">
+    <div class="tab-bar" id="renewal-tabs">
+      <div class="tab-bar-item active" data-tab="all">ทั้งหมด</div>
+      <div class="tab-bar-item" data-tab="considering">กำลังคิด</div>
+      <div class="tab-bar-item" data-tab="billing">รอชำระ</div>
+      <div class="tab-bar-item" data-tab="no_response">ไม่ตอบสนอง</div>
+      <div class="tab-bar-item" data-tab="hot">🔥 HOT</div>
+    </div>
+    <div class="sort-bar">
+      <span>เรียงตาม:</span>
+      <select class="sort-select" id="renewal-sort">
+        <option value="expiry">วันหมดอายุ</option>
+        <option value="score">Engagement</option>
+        <option value="last_contact">Last Contact</option>
+      </select>
+    </div>
+    <div class="section" style="padding-top:4px;">
+      <div id="renewal-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       BOTTOM NAV
+  ═══════════════════════════════════════════════ -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-item active" data-nav="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-item" data-nav="leads">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Leads
+    </button>
+    <div class="nav-item fab-item">
+      <button class="fab-btn" id="fab-add" aria-label="Add Lead">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+    <button class="nav-item" data-nav="renewal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Renewal
+    </button>
+    <button class="nav-item" data-nav="leads" id="nav-leads-hidden" style="display:none;"></button>
+  </nav>
+
+  <!-- ═══ RENEWAL DETAIL PANEL ═══ -->
+  <div class="slide-panel-overlay" id="renewal-overlay"></div>
+  <div class="slide-panel" id="renewal-panel">
+    <div class="slide-panel-handle"></div>
+    <div class="slide-panel-title" id="renewal-panel-title">Renewal Detail</div>
+    <div class="slide-panel-body" id="renewal-panel-body"></div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════
+const SUPABASE_URL = 'https://argdnwhxwykdwrwkojyb.supabase.co';
+const SUPABASE_KEY = window.HowSupabaseKey ? window.HowSupabaseKey.get() : '';
+const SB = {
+  headers: {
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'apikey': SUPABASE_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  },
+  get(path) {
+    return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: this.headers }).then(r => r.json());
+  },
+  post(path, body) {
+    return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: 'POST', headers: this.headers, body: JSON.stringify(body)
+    }).then(r => r.json());
+  },
+  patch(path, body) {
+    return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: 'PATCH', headers: this.headers, body: JSON.stringify(body)
+    }).then(r => r.json());
+  }
+};
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+const state = {
+  leads: [],
+  renewals: [],
+  members: [],
+  staff: [],
+  currentLead: null,
+  currentRenewal: null,
+  leadFilter: 'all',
+  leadSearch: '',
+  renewalTab: 'all',
+  renewalSort: 'expiry',
+  history: [],
+  editingLeadId: null
+};
+
+// ═══════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════
+const pages = {
+  home: document.getElementById('page-home'),
+  leads: document.getElementById('page-leads'),
+  'lead-detail': document.getElementById('page-lead-detail'),
+  'lead-form': document.getElementById('page-lead-form'),
+  renewal: document.getElementById('page-renewal')
+};
+
+function navigate(page, pushHistory = true) {
+  // Hide all pages
+  Object.values(pages).forEach(p => p.classList.remove('active'));
+  pages[page].classList.add('active');
+
+  // Update bottom nav
+  document.querySelectorAll('.nav-item[data-nav]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.nav === page || (page.startsWith('lead') && btn.dataset.nav === 'leads'));
+  });
+  document.querySelectorAll('.nav-item[data-nav="home"]').forEach(btn => btn.classList.toggle('active', page === 'home'));
+  document.querySelectorAll('.nav-item[data-nav="renewal"]').forEach(btn => btn.classList.toggle('active', page === 'renewal'));
+  document.querySelectorAll('.nav-item[data-nav="leads"]').forEach(btn => btn.classList.toggle('active', page === 'leads' || page === 'lead-detail' || page === 'lead-form'));
+
+  // Header back button
+  const headerLeft = document.getElementById('header-left');
+  const titles = {
+    home: null,
+    leads: 'Leads',
+    'lead-detail': '← Leads',
+    'lead-form': '← ยกเลิก',
+    renewal: 'Renewal'
+  };
+
+  if (page === 'home') {
+    headerLeft.innerHTML = `<div class="header-brand"><div class="header-logo">HOW</div><div><div class="header-title">Sales</div><div class="header-sub">HOW Bangkok</div></div></div>`;
+  } else if (page === 'lead-detail' || page === 'lead-form') {
+    const label = page === 'lead-detail' ? '← Leads' : (state.editingLeadId ? '← Lead Detail' : '← ยกเลิก');
+    headerLeft.innerHTML = `<button class="back-btn" onclick="goBack()">${label}</button>`;
+  } else {
+    headerLeft.innerHTML = `<div class="header-brand"><div class="header-logo">HOW</div><div><div class="header-title">${titles[page] || page}</div></div></div>`;
+  }
+
+  if (pushHistory) state.history.push(page);
+  window.scrollTo(0, 0);
+}
+
+function goBack() {
+  state.history.pop();
+  const prev = state.history[state.history.length - 1] || 'home';
+  state.history.pop();
+  navigate(prev);
+}
+
+// ═══════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════
+const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+function formatThaiDate(dateStr) {
+  if (!dateStr) return '–';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d)) return dateStr;
+    return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`;
+  } catch { return dateStr; }
+}
+
+function daysFromNow(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    now.setHours(0,0,0,0); d.setHours(0,0,0,0);
+    return Math.round((d - now) / 86400000);
+  } catch { return null; }
+}
+
+function daysBadge(days) {
+  if (days === null) return '';
+  const cls = days <= 30 ? 'days-red' : days <= 60 ? 'days-warn' : 'days-green';
+  const sign = days < 0 ? '' : '+';
+  const label = days < 0 ? `${Math.abs(days)} วันที่แล้ว` : `${days} วัน`;
+  return `<span class="days-badge ${cls}">${label}</span>`;
+}
+
+function statusBadge(status) {
+  const map = {
+    paid: ['badge-green', '✅ จ่ายแล้ว'],
+    renewed: ['badge-green', '✅ ต่ออายุแล้ว'],
+    billing: ['badge-gold', '💰 รอชำระ'],
+    considering: ['badge-gold', '🤔 กำลังพิจารณา'],
+    appointment: ['badge-gold', '📅 นัดเยี่ยมชม'],
+    hot: ['badge-red', '🔥 สนใจมาก'],
+    not_interested: ['badge-gray', '❌ ไม่สนใจ'],
+    no: ['badge-gray', '❌ ไม่ต่ออายุ'],
+    new: ['badge-blue', '🆕 ใหม่'],
+    line: ['badge-blue', '💬 ทัก LINE แล้ว'],
+    no_response: ['badge-gray', '🔇 ไม่ตอบสนอง']
+  };
+  const [cls, label] = map[status] || ['badge-gray', status || '–'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function tempBadge(temp) {
+  const map = {
+    hot: `<span class="temp-hot">🔥 สนใจมาก</span>`,
+    warm: `<span class="temp-warm">🌤 สนใจพอควร</span>`,
+    cold: `<span class="temp-cold">❄️ ยังไม่แน่ใจ</span>`
+  };
+  return map[temp] || '';
+}
+
+function channelIcon(channel) {
+  const map = { LINE: '💬', โทร: '📞', พบตัว: '🤝', Email: '📧', Other: '📝' };
+  return map[channel] || '📝';
+}
+
+function scoreDots(score) {
+  const n = parseInt(score) || 0;
+  let html = '<div class="score-dots">';
+  for (let i = 1; i <= 10; i++) {
+    html += `<div class="score-dot${i <= n ? ' filled' : ''}"></div>`;
+  }
+  html += `<span style="font-size:11px;color:var(--text2);margin-left:4px;">${n}/10</span></div>`;
+  return html;
+}
+
+function sourceLabel(s) {
+  const map = { website:'Website', friends:'Friends', facebook:'Facebook', refer:'Refer', open_house:'Open House', walk_in:'Walk-in', other:'Other' };
+  return map[s] || s || '–';
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ═══════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'} ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════
+//  SKELETON RENDER
+// ═══════════════════════════════════════════
+function skeletonCards(n = 3) {
+  return Array.from({length: n}, () => `
+    <div class="skel-card">
+      <div class="skeleton skel-line w80"></div>
+      <div class="skeleton skel-line w60"></div>
+      <div class="skeleton skel-line w40"></div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+//  DATA LOADING
+// ═══════════════════════════════════════════
+async function loadStaff() {
+  try {
+    const data = await SB.get('staff?is_active=eq.true&select=id,name,nickname&order=name.asc');
+    state.staff = Array.isArray(data) ? data : [];
+  } catch {
+    state.staff = [
+      {id:'1',name:'Mambo',nickname:'Mambo'},
+      {id:'2',name:'Ying',nickname:'Ying'},
+      {id:'3',name:'Yui',nickname:'Yui'},
+      {id:'4',name:'Tak',nickname:'Tak'}
+    ];
+  }
+  // Populate POC selects
+  const pocSel = document.getElementById('f-poc');
+  pocSel.innerHTML = '<option value="">-- เลือก POC --</option>' +
+    state.staff.map(s => `<option value="${s.id}">${s.name}${s.nickname && s.nickname !== s.name ? ' (' + s.nickname + ')' : ''}</option>`).join('');
+}
+
+async function loadLeads() {
+  document.getElementById('leads-list').innerHTML = skeletonCards(4);
+  try {
+    const data = await SB.get('leads?select=*&order=created_at.desc');
+    state.leads = Array.isArray(data) ? data : [];
+  } catch(e) {
+    console.warn('leads error', e);
+    state.leads = [];
+  }
+  renderLeads();
+  updateHomeStats();
+}
+
+async function loadRenewals() {
+  document.getElementById('renewal-list').innerHTML = skeletonCards(4);
+  try {
+    // Load renewal tracking
+    const renewals = await SB.get('renewal_tracking?select=*&order=expiry_month.asc');
+    state.renewals = Array.isArray(renewals) ? renewals : [];
+
+    // Also load expiring members
+    const d30 = new Date(); d30.setDate(d30.getDate() + 60);
+    const members = await SB.get(`members?membership_status=eq.active&end_date=lte.${d30.toISOString().slice(0,10)}&select=id,nickname,fullname,end_date,membership_type,email,phone&order=end_date.asc`);
+    state.members = Array.isArray(members) ? members : [];
+  } catch(e) {
+    console.warn('renewals error', e);
+    state.renewals = []; state.members = [];
+  }
+  renderRenewals();
+}
+
+async function loadHomeData() {
+  // Follow up today
+  document.getElementById('followup-list').innerHTML = skeletonCards(2);
+  document.getElementById('expiring-list').innerHTML = skeletonCards(2);
+
+  // Get follow-up leads (next_date = today)
+  const todayStr = today();
+  try {
+    const followLead = await SB.get(`contact_logs?next_date=eq.${todayStr}&select=*,leads(id,nickname,fullname,status,temperature)&order=contact_date.desc`);
+    renderFollowUp(Array.isArray(followLead) ? followLead : []);
+  } catch {
+    document.getElementById('followup-list').innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">ไม่มี follow-up วันนี้</div></div>';
+  }
+
+  // Expiring this month
+  const endOfMonth = new Date(); endOfMonth.setDate(endOfMonth.getDate() + 30);
+  try {
+    const expiring = await SB.get(`members?membership_status=eq.active&end_date=lte.${endOfMonth.toISOString().slice(0,10)}&select=id,nickname,fullname,end_date,membership_type&order=end_date.asc`);
+    renderExpiringHome(Array.isArray(expiring) ? expiring : []);
+  } catch {
+    document.getElementById('expiring-list').innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">ไม่มีสมาชิกหมดอายุเดือนนี้</div></div>';
+  }
+}
+
+function updateHomeStats() {
+  document.getElementById('stat-all').textContent = state.leads.length;
+  document.getElementById('stat-hot').textContent = state.leads.filter(l => l.temperature === 'hot').length;
+  const now = new Date(); const end = new Date(); end.setDate(end.getDate() + 30);
+  // stat-expiring handled in loadHomeData
+  const todayStr = today();
+  document.getElementById('stat-followup').textContent = state.leads.filter(l => l.next_date === todayStr).length;
+}
+
+// ═══════════════════════════════════════════
+//  RENDER FUNCTIONS
+// ═══════════════════════════════════════════
+function renderFollowUp(logs) {
+  const el = document.getElementById('followup-list');
+  const count = document.getElementById('followup-count');
+  if (!logs.length) {
+    count.textContent = '0';
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">ไม่มี follow-up วันนี้</div><div class="empty-sub">เยี่ยม! ตามงานครบแล้ว</div></div>';
+    return;
+  }
+  // Deduplicate by lead_id / member_id
+  const seen = new Set();
+  const unique = logs.filter(l => {
+    const key = l.lead_id || ('m' + l.member_id);
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+  count.textContent = unique.length;
+  document.getElementById('stat-followup').textContent = unique.length;
+  el.innerHTML = unique.map(log => {
+    const lead = log.leads;
+    if (lead) {
+      return `<div class="card" onclick="openLeadDetail(${JSON.stringify(lead.id)})">
+        <div class="card-row">
+          <div>
+            <span class="card-name">${lead.nickname || lead.fullname || '–'}</span>
+            ${lead.fullname && lead.nickname ? `<span class="card-nick">${lead.fullname}</span>` : ''}
+          </div>
+          ${statusBadge(lead.status)}
+        </div>
+        <div class="card-meta">
+          ${tempBadge(lead.temperature)}
+          <span>${log.summary || ''}</span>
+        </div>
+      </div>`;
+    }
+    return `<div class="card">
+      <div class="card-row"><div><span class="card-name">${log.member_nickname || log.fullname || 'สมาชิก'}</span></div></div>
+      <div class="card-meta"><span>${log.summary || ''}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderExpiringHome(members) {
+  const el = document.getElementById('expiring-list');
+  const count = document.getElementById('expiring-count');
+  document.getElementById('stat-expiring').textContent = members.length;
+  count.textContent = members.length;
+  if (!members.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🎉</div><div class="empty-title">ไม่มีสมาชิกหมดอายุใน 30 วัน</div></div>';
+    return;
+  }
+  el.innerHTML = members.map(m => {
+    const days = daysFromNow(m.end_date);
+    return `<div class="card" onclick="openRenewalForMember(${JSON.stringify(m.id)})">
+      <div class="card-row">
+        <div>
+          <span class="card-name">${m.nickname || m.fullname || '–'}</span>
+          ${m.fullname && m.nickname ? `<span class="card-nick">${m.fullname}</span>` : ''}
+        </div>
+        ${daysBadge(days)}
+      </div>
+      <div class="card-meta">
+        <span>หมดอายุ ${formatThaiDate(m.end_date)}</span>
+        <span>${m.membership_type || ''}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLeads() {
+  const el = document.getElementById('leads-list');
+  let filtered = [...state.leads];
+
+  // Filter
+  if (state.leadFilter === 'hot') filtered = filtered.filter(l => l.temperature === 'hot');
+  else if (state.leadFilter === 'warm') filtered = filtered.filter(l => l.temperature === 'warm');
+  else if (state.leadFilter === 'cold') filtered = filtered.filter(l => l.temperature === 'cold');
+  else if (state.leadFilter === 'paid') filtered = filtered.filter(l => l.status === 'paid');
+  else if (state.leadFilter === 'not_interested') filtered = filtered.filter(l => l.status === 'not_interested');
+
+  // Search
+  if (state.leadSearch) {
+    const q = state.leadSearch.toLowerCase();
+    filtered = filtered.filter(l =>
+      (l.nickname || '').toLowerCase().includes(q) ||
+      (l.fullname || '').toLowerCase().includes(q) ||
+      (l.company || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">ไม่พบ leads</div><div class="empty-sub">ลองเปลี่ยน filter หรือ<br>กด + เพิ่ม lead ใหม่เลย</div></div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(l => {
+    const poc = state.staff.find(s => s.id == l.poc_id);
+    return `<div class="card" onclick="openLeadDetail(${JSON.stringify(l.id)})">
+      <div class="card-row">
+        <div style="flex:1;min-width:0;">
+          <span class="card-name">${l.nickname || '–'}</span>
+          ${l.fullname ? `<span class="card-nick">${l.fullname}</span>` : ''}
+        </div>
+        <div style="flex-shrink:0;">
+          ${statusBadge(l.status)}
+        </div>
+      </div>
+      <div class="card-meta" style="margin-top:6px;">
+        ${tempBadge(l.temperature)}
+        ${poc ? `<span>👤 ${poc.nickname || poc.name}</span>` : ''}
+        ${l.company ? `<span>🏢 ${l.company}</span>` : ''}
+        ${l.last_contact_date ? `<span>📅 ${formatThaiDate(l.last_contact_date)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRenewals() {
+  const el = document.getElementById('renewal-list');
+
+  // Merge renewal_tracking with members data
+  let items = [...state.renewals];
+
+  // Filter by tab
+  if (state.renewalTab !== 'all') {
+    if (state.renewalTab === 'hot') items = items.filter(r => r.is_hot === true || r.engagement_score >= 8);
+    else items = items.filter(r => {
+      const s = (r.status || r.renewal_status || '').toLowerCase().replace(/ /g,'_');
+      return s === state.renewalTab;
+    });
+  }
+
+  // Sort
+  if (state.renewalSort === 'expiry') {
+    items.sort((a,b) => new Date(a.expiry_month || a.end_date || 0) - new Date(b.expiry_month || b.end_date || 0));
+  } else if (state.renewalSort === 'score') {
+    items.sort((a,b) => (b.engagement_score || 0) - (a.engagement_score || 0));
+  } else if (state.renewalSort === 'last_contact') {
+    items.sort((a,b) => new Date(b.last_contact_date || 0) - new Date(a.last_contact_date || 0));
+  }
+
+  if (!items.length) {
+    // Fall back to members if no renewal_tracking data
+    if (state.members.length) {
+      renderMembersAsRenewals(el);
+      return;
+    }
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔄</div><div class="empty-title">ไม่มีข้อมูล renewal</div><div class="empty-sub">ยังไม่มีสมาชิกในระบบ renewal tracking</div></div>`;
+    return;
+  }
+
+  el.innerHTML = items.map(r => {
+    const days = daysFromNow(r.expiry_month || r.end_date);
+    const pocStaff = state.staff.find(s => s.id == r.director_poc_id || s.id == r.poc_id);
+    return `<div class="card" onclick="openRenewalDetail(${JSON.stringify(r.id)})">
+      <div class="card-row">
+        <div style="flex:1;min-width:0;">
+          <span class="card-name">${r.member_nickname || r.nickname || r.fullname || 'ไม่ระบุชื่อ'}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          ${daysBadge(days)}
+          ${statusBadge(r.renewal_status || r.status)}
+        </div>
+      </div>
+      <div class="card-meta" style="margin-top:6px;">
+        <span>หมดอายุ ${formatThaiDate(r.expiry_month || r.end_date)}</span>
+        ${pocStaff ? `<span>👤 ${pocStaff.nickname || pocStaff.name}</span>` : ''}
+        ${r.engagement_score ? scoreDots(r.engagement_score) : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMembersAsRenewals(el) {
+  let members = [...state.members];
+  if (state.renewalTab !== 'all') {
+    // filter is rough since members don't have renewal_status
+  }
+  if (state.renewalSort === 'expiry') {
+    members.sort((a,b) => new Date(a.end_date) - new Date(b.end_date));
+  }
+  el.innerHTML = members.map(m => {
+    const days = daysFromNow(m.end_date);
+    return `<div class="card" onclick="openRenewalForMember(${JSON.stringify(m.id)})">
+      <div class="card-row">
+        <div style="flex:1;">
+          <span class="card-name">${m.nickname || m.fullname || '–'}</span>
+          ${m.fullname && m.nickname ? `<span class="card-nick">${m.fullname}</span>` : ''}
+        </div>
+        ${daysBadge(days)}
+      </div>
+      <div class="card-meta" style="margin-top:6px;">
+        <span>หมดอายุ ${formatThaiDate(m.end_date)}</span>
+        <span>${m.membership_type || ''}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+//  LEAD DETAIL
+// ═══════════════════════════════════════════
+async function openLeadDetail(id) {
+  navigate('lead-detail');
+  const headerEl = document.getElementById('lead-detail-header');
+  const bodyEl = document.getElementById('lead-detail-body');
+  headerEl.innerHTML = '<div class="skeleton skel-line w60" style="height:24px;margin-bottom:8px;"></div><div class="skeleton skel-line w40" style="height:16px;"></div>';
+  bodyEl.innerHTML = skeletonCards(3);
+
+  try {
+    const leads = await SB.get(`leads?id=eq.${id}&select=*`);
+    const lead = Array.isArray(leads) ? leads[0] : leads;
+    if (!lead) { toast('ไม่พบ lead นี้', 'error'); goBack(); return; }
+    state.currentLead = lead;
+
+    const poc = state.staff.find(s => s.id == lead.poc_id);
+
+    headerEl.innerHTML = `
+      <div class="profile-name">${lead.fullname || lead.nickname || '–'}</div>
+      ${lead.fullname && lead.nickname ? `<div class="profile-nick">${lead.nickname}</div>` : ''}
+      <div class="profile-badges">
+        ${statusBadge(lead.status)}
+        ${tempBadge(lead.temperature)}
+        ${lead.visited ? '<span class="badge badge-gold">👀 Visited</span>' : ''}
+      </div>`;
+
+    // Pipeline stages
+    const stages = [
+      {key:'send_info', label:'ส่งข้อมูล', emoji:'📨'},
+      {key:'contact1', label:'ติดต่อครั้งแรก', emoji:'📞'},
+      {key:'appointment', label:'นัดเยี่ยมชม', emoji:'📅'},
+      {key:'visit', label:'เยี่ยมชมแล้ว', emoji:'👣'},
+      {key:'considering', label:'กำลังคิด', emoji:'🤔'},
+      {key:'billing', label:'รอชำระ', emoji:'💰'},
+      {key:'payment', label:'จ่ายแล้ว', emoji:'💳'},
+      {key:'onboard', label:'เริ่มเลย!', emoji:'🎉'}
+    ];
+    const stageData = lead.pipeline_stages || {};
+    const stageHTML = stages.map(s => {
+      const val = stageData[s.key] || (lead.status === s.key ? 'done' : '');
+      const cls = val === 'done' ? 'done' : val === 'na' ? 'na' : '';
+      return `<div class="stage-item" onclick="toggleStage('${s.key}','${lead.id}')">
+        <div class="stage-dot ${cls}">${val === 'done' ? '✓' : s.emoji}</div>
+        <div class="stage-label">${s.label}</div>
+      </div>`;
+    }).join('');
+
+    // Load contact logs
+    const logs = await SB.get(`contact_logs?lead_id=eq.${id}&select=*&order=contact_date.desc`);
+    const logsArr = Array.isArray(logs) ? logs : [];
+
+    bodyEl.innerHTML = `
+      <div class="detail-section" style="margin-top:12px;">
+        <div class="detail-section-header">
+          ℹ️ ข้อมูลติดต่อ
+          <button class="btn-ghost" onclick="openEditLead(${JSON.stringify(id)})">✏️ แก้ไข</button>
+        </div>
+        ${fieldRow('เบอร์', lead.phone ? `<a href="tel:${lead.phone}" style="color:var(--accent)">${lead.phone}</a>` : '–')}
+        ${fieldRow('LINE', lead.line_id || '–')}
+        ${fieldRow('Email', lead.email || '–')}
+        ${fieldRow('บริษัท', lead.company || '–')}
+        ${fieldRow('ตำแหน่ง', lead.position || '–')}
+        ${fieldRow('Source', sourceLabel(lead.source))}
+        ${fieldRow('POC', poc ? (poc.name) : '–')}
+        ${lead.remark ? fieldRow('หมายเหตุ', lead.remark) : ''}
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-header">🔄 Pipeline</div>
+        <div style="padding:12px 0;">
+          <div class="pipeline-wrap">
+            <div class="pipeline-stages" id="pipeline-stages-${id}">${stageHTML}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section" id="logs-section-${id}">
+        <div class="detail-section-header">
+          📋 Contact Log
+          <button class="btn-ghost" onclick="showLogForm('lead','${id}')">+ Log</button>
+        </div>
+        <div style="padding:12px 14px;" id="log-form-area-${id}"></div>
+        <div style="padding:0 14px 12px;" id="log-timeline-${id}">
+          ${renderLogTimeline(logsArr)}
+        </div>
+      </div>
+
+      <div style="height:8px;"></div>`;
+
+  } catch(e) {
+    console.error(e);
+    toast('โหลดข้อมูลล้มเหลว', 'error');
+    bodyEl.innerHTML = '<div class="empty-state"><div class="empty-icon">😢</div><div class="empty-title">โหลดข้อมูลไม่ได้</div></div>';
+  }
+}
+
+function fieldRow(key, val) {
+  return `<div class="detail-row"><div class="detail-key">${key}</div><div class="detail-val">${val}</div></div>`;
+}
+
+function renderLogTimeline(logs) {
+  if (!logs.length) return '<div class="empty-state" style="padding:20px 0;"><div class="empty-icon">📭</div><div class="empty-title">ยังไม่มี log</div></div>';
+  return `<div class="timeline">${logs.map(log => {
+    const staff = state.staff.find(s => s.id == log.staff_id);
+    return `<div class="timeline-item">
+      <div class="timeline-dot">${channelIcon(log.channel)}</div>
+      <div class="timeline-body">
+        <div class="timeline-date">${formatThaiDate(log.contact_date)} • ${staff ? staff.name : '–'}</div>
+        <div class="timeline-summary">${log.summary || '–'}</div>
+        <div class="timeline-meta">
+          ${log.outcome ? `<span>→ ${log.outcome}</span>` : ''}
+          ${log.next_action ? `<span>📌 ${log.next_action}</span>` : ''}
+          ${log.next_date ? `<span>📅 ${formatThaiDate(log.next_date)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function toggleStage(stageKey, leadId) {
+  const lead = state.leads.find(l => l.id == leadId) || state.currentLead;
+  if (!lead) return;
+  const stages = { ...(lead.pipeline_stages || {}) };
+  if (stages[stageKey] === 'done') { stages[stageKey] = ''; }
+  else { stages[stageKey] = 'done'; }
+
+  try {
+    await SB.patch(`leads?id=eq.${leadId}`, { pipeline_stages: stages });
+    lead.pipeline_stages = stages;
+    toast('อัปเดต pipeline แล้ว');
+    // Re-render the stages
+    openLeadDetail(leadId);
+  } catch { toast('อัปเดตล้มเหลว', 'error'); }
+}
+
+// ═══════════════════════════════════════════
+//  ADD / EDIT LEAD
+// ═══════════════════════════════════════════
+function openAddLead() {
+  state.editingLeadId = null;
+  document.getElementById('lead-form').reset();
+  document.getElementById('f-visited').checked = false;
+  const titleEl = document.querySelector('#page-lead-form .section');
+  navigate('lead-form');
+  document.getElementById('header-left').innerHTML = '<button class="back-btn" onclick="goBack()">← ยกเลิก</button>';
+}
+
+function openEditLead(id) {
+  state.editingLeadId = id;
+  const lead = state.leads.find(l => l.id == id) || state.currentLead;
+  if (!lead) return;
+
+  navigate('lead-form');
+  document.getElementById('header-left').innerHTML = `<button class="back-btn" onclick="goBack()">← Lead Detail</button>`;
+
+  document.getElementById('f-nickname').value = lead.nickname || '';
+  document.getElementById('f-fullname').value = lead.fullname || '';
+  document.getElementById('f-phone').value = lead.phone || '';
+  document.getElementById('f-line').value = lead.line_id || '';
+  document.getElementById('f-email').value = lead.email || '';
+  document.getElementById('f-company').value = lead.company || '';
+  document.getElementById('f-position').value = lead.position || '';
+  document.getElementById('f-source').value = lead.source || '';
+  document.getElementById('f-temp').value = lead.temperature || 'warm';
+  document.getElementById('f-poc').value = lead.poc_id || '';
+  document.getElementById('f-status').value = lead.status || 'new';
+  document.getElementById('f-visited').checked = !!lead.visited;
+  document.getElementById('f-remark').value = lead.remark || '';
+}
+
+document.getElementById('lead-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const nick = document.getElementById('f-nickname').value.trim();
+  if (!nick) { toast('กรุณาใส่ชื่อเล่น', 'warn'); return; }
+
+  const btn = document.getElementById('lead-form-save');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  const body = {
+    nickname: nick,
+    fullname: document.getElementById('f-fullname').value.trim() || null,
+    phone: document.getElementById('f-phone').value.trim() || null,
+    line_id: document.getElementById('f-line').value.trim() || null,
+    email: document.getElementById('f-email').value.trim() || null,
+    company: document.getElementById('f-company').value.trim() || null,
+    position: document.getElementById('f-position').value.trim() || null,
+    source: document.getElementById('f-source').value || null,
+    temperature: document.getElementById('f-temp').value,
+    poc_id: document.getElementById('f-poc').value || null,
+    status: document.getElementById('f-status').value,
+    visited: document.getElementById('f-visited').checked,
+    remark: document.getElementById('f-remark').value.trim() || null,
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    if (state.editingLeadId) {
+      await SB.patch(`leads?id=eq.${state.editingLeadId}`, body);
+      toast('อัปเดต lead แล้ว ✅');
+      const idx = state.leads.findIndex(l => l.id == state.editingLeadId);
+      if (idx >= 0) Object.assign(state.leads[idx], body);
+      goBack(); // go back to lead detail
+    } else {
+      body.created_at = new Date().toISOString();
+      const result = await SB.post('leads', body);
+      toast('เพิ่ม lead สำเร็จ ✅');
+      if (result && result[0]) state.leads.unshift(result[0]);
+      navigate('leads');
+      renderLeads();
+    }
+  } catch(err) {
+    console.error(err);
+    toast('บันทึกล้มเหลว — ลองใหม่', 'error');
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+});
+
+// ═══════════════════════════════════════════
+//  CONTACT LOG FORM
+// ═══════════════════════════════════════════
+function showLogForm(type, refId) {
+  const areaId = `log-form-area-${refId}`;
+  const area = document.getElementById(areaId);
+  if (!area) return;
+  if (area.querySelector('.log-form-wrap')) { area.innerHTML = ''; return; }
+
+  const staffOptions = state.staff.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+  area.innerHTML = `<div class="log-form-wrap">
+    <div class="log-form-title">
+      + บันทึก Contact
+      <button onclick="document.getElementById('${areaId}').innerHTML=''" style="font-size:18px;color:var(--text2);padding:0;">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">วันที่</label>
+        <input type="date" class="form-control" id="lf-date-${refId}" value="${today()}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ช่องทาง</label>
+        <select class="form-control" id="lf-channel-${refId}">
+          <option value="LINE">💬 LINE</option>
+          <option value="โทร">📞 โทร</option>
+          <option value="พบตัว">🤝 พบตัว</option>
+          <option value="Email">📧 Email</option>
+          <option value="Other">📝 Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ติดต่อโดย</label>
+      <select class="form-control" id="lf-staff-${refId}">${staffOptions}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">สรุป <span class="req">*</span></label>
+      <textarea class="form-control" id="lf-summary-${refId}" rows="2" placeholder="สรุปการสนทนา..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">ผลลัพธ์</label>
+        <select class="form-control" id="lf-outcome-${refId}">
+          <option value="follow_up">Follow up</option>
+          <option value="interested">Interested</option>
+          <option value="not_ready">Not ready</option>
+          <option value="no_answer">No answer</option>
+          <option value="rejected">Rejected</option>
+          <option value="paid">Paid</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Next Date</label>
+        <input type="date" class="form-control" id="lf-nextdate-${refId}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Action ต่อไป</label>
+      <input type="text" class="form-control" id="lf-nextaction-${refId}" placeholder="ส่ง proposal / นัด visit...">
+    </div>
+    <button class="btn btn-primary" id="lf-save-${refId}" onclick="saveLog('${type}','${refId}')">
+      <div class="spinner"></div><span class="btn-text">💾 บันทึก Log</span>
+    </button>
+  </div>`;
+}
+
+async function saveLog(type, refId) {
+  const summary = (document.getElementById(`lf-summary-${refId}`) || {}).value;
+  if (!summary || !summary.trim()) { toast('กรุณาใส่สรุปการสนทนา', 'warn'); return; }
+
+  const btn = document.getElementById(`lf-save-${refId}`);
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+
+  const body = {
+    contact_date: document.getElementById(`lf-date-${refId}`).value,
+    channel: document.getElementById(`lf-channel-${refId}`).value,
+    staff_id: document.getElementById(`lf-staff-${refId}`).value || null,
+    summary: summary.trim(),
+    outcome: document.getElementById(`lf-outcome-${refId}`).value,
+    next_action: (document.getElementById(`lf-nextaction-${refId}`) || {}).value?.trim() || null,
+    next_date: document.getElementById(`lf-nextdate-${refId}`).value || null,
+    created_at: new Date().toISOString()
+  };
+  if (type === 'lead') body.lead_id = refId;
+  else body.member_id = refId;
+
+  try {
+    await SB.post('contact_logs', body);
+    toast('บันทึก log สำเร็จ ✅');
+    document.getElementById(`log-form-area-${refId}`).innerHTML = '';
+
+    // Reload timeline
+    const logs = await SB.get(`contact_logs?${type === 'lead' ? 'lead_id' : 'member_id'}=eq.${refId}&select=*&order=contact_date.desc`);
+    const timelineEl = document.getElementById(`log-timeline-${refId}`);
+    if (timelineEl) timelineEl.innerHTML = renderLogTimeline(Array.isArray(logs) ? logs : []);
+  } catch(err) {
+    console.error(err);
+    toast('บันทึก log ล้มเหลว', 'error');
+  } finally {
+    if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+  }
+}
+
+// ═══════════════════════════════════════════
+//  RENEWAL DETAIL
+// ═══════════════════════════════════════════
+async function openRenewalDetail(id) {
+  const panel = document.getElementById('renewal-panel');
+  const overlay = document.getElementById('renewal-overlay');
+  const body = document.getElementById('renewal-panel-body');
+  const title = document.getElementById('renewal-panel-title');
+
+  overlay.classList.add('active');
+  panel.classList.add('active');
+  body.innerHTML = skeletonCards(2);
+
+  const renewal = state.renewals.find(r => r.id == id);
+  if (!renewal) { body.innerHTML = '<div class="empty-state"><div class="empty-icon">😢</div><div class="empty-title">ไม่พบข้อมูล</div></div>'; return; }
+
+  title.textContent = `${renewal.nickname || renewal.fullname || 'Renewal Detail'}`;
+
+  const days = daysFromNow(renewal.expiry_month || renewal.end_date);
+  const poc = state.staff.find(s => s.id == renewal.director_poc_id || s.id == renewal.poc_id);
+
+  // Load logs
+  const logs = await SB.get(`contact_logs?member_id=eq.${renewal.member_id || renewal.id}&select=*&order=contact_date.desc`).catch(() => []);
+  const logsArr = Array.isArray(logs) ? logs : [];
+
+  const staffOptions = state.staff.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  const renewalStatuses = ['considering','billing','no_response','renewed','no'];
+
+  body.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        ${statusBadge(renewal.renewal_status)}
+        ${daysBadge(days)}
+        ${renewal.engagement_score ? scoreDots(renewal.engagement_score) : ''}
+      </div>
+      ${fieldRow('หมดอายุ', formatThaiDate(renewal.expiry_month || renewal.end_date))}
+      ${fieldRow('ประเภท', renewal.membership_type || '–')}
+      ${poc ? fieldRow('Director POC', poc.name) : ''}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">อัปเดตสถานะ Renewal</label>
+      <select class="form-control" id="renewal-status-sel">
+        ${renewalStatuses.map(s => `<option value="${s}" ${renewal.renewal_status === s ? 'selected':''}>${statusLabelRenewal(s)}</option>`).join('')}
+      </select>
+    </div>
+    <div id="rejection-form" style="display:none;margin-bottom:12px;">
+      <div class="form-group">
+        <label class="form-label">เหตุผลที่ไม่ต่อ</label>
+        <select class="form-control" id="rejection-cat">
+          <option value="ราคา">💸 ราคา</option>
+          <option value="เวลา">⏰ เวลา</option>
+          <option value="ย้าย">🚗 ย้ายที่</option>
+          <option value="สุขภาพ">🏥 สุขภาพ</option>
+          <option value="อื่นๆ">📝 อื่นๆ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">รายละเอียด</label>
+        <textarea class="form-control" id="rejection-detail" rows="2" placeholder="เพิ่มเติม...">${renewal.rejection_reason || ''}</textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="renewal-status-save" onclick="saveRenewalStatus(${JSON.stringify(renewal.id)})">
+      <div class="spinner"></div><span class="btn-text">💾 บันทึกสถานะ</span>
+    </button>
+
+    <div style="margin-top:20px;">
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        📋 Contact Log
+        <button class="btn-ghost" onclick="showLogForm('member','${renewal.member_id || renewal.id}')">+ Log</button>
+      </div>
+      <div id="log-form-area-${renewal.member_id || renewal.id}"></div>
+      <div id="log-timeline-${renewal.member_id || renewal.id}">${renderLogTimeline(logsArr)}</div>
+    </div>
+  `;
+
+  // Watch for "No" to show rejection form
+  document.getElementById('renewal-status-sel').addEventListener('change', function() {
+    document.getElementById('rejection-form').style.display = this.value === 'no' ? 'block' : 'none';
+  });
+  if (renewal.renewal_status === 'no') {
+    document.getElementById('rejection-form').style.display = 'block';
+  }
+}
+
+function statusLabelRenewal(s) {
+  const map = { considering:'🤔 Considering', billing:'💰 Billing', no_response:'🔇 No Response', renewed:'✅ Renewed', no:'❌ ไม่ต่อ' };
+  return map[s] || s;
+}
+
+async function saveRenewalStatus(id) {
+  const status = document.getElementById('renewal-status-sel').value;
+  const btn = document.getElementById('renewal-status-save');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  const body = { renewal_status: status, updated_at: new Date().toISOString() };
+  if (status === 'no') {
+    body.rejection_category = document.getElementById('rejection-cat').value;
+    body.rejection_reason = document.getElementById('rejection-detail').value.trim();
+  }
+
+  try {
+    await SB.patch(`renewal_tracking?id=eq.${id}`, body);
+    const idx = state.renewals.findIndex(r => r.id == id);
+    if (idx >= 0) Object.assign(state.renewals[idx], body);
+    toast('อัปเดตสถานะ renewal แล้ว ✅');
+    renderRenewals();
+  } catch(err) {
+    console.error(err);
+    toast('บันทึกล้มเหลว', 'error');
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function openRenewalForMember(memberId) {
+  // Try to find in renewal_tracking
+  const renewal = state.renewals.find(r => r.member_id == memberId);
+  if (renewal) { openRenewalDetail(renewal.id); return; }
+
+  // Show with member data
+  const member = state.members.find(m => m.id == memberId);
+  if (!member) return;
+
+  const panel = document.getElementById('renewal-panel');
+  const overlay = document.getElementById('renewal-overlay');
+  const body = document.getElementById('renewal-panel-body');
+  const title = document.getElementById('renewal-panel-title');
+
+  overlay.classList.add('active');
+  panel.classList.add('active');
+  title.textContent = member.nickname || member.fullname || 'Renewal';
+
+  const days = daysFromNow(member.end_date);
+  const logs = await SB.get(`contact_logs?member_id=eq.${memberId}&select=*&order=contact_date.desc`).catch(() => []);
+
+  body.innerHTML = `
+    <div style="margin-bottom:16px;">
+      ${daysBadge(days)}
+      ${fieldRow('หมดอายุ', formatThaiDate(member.end_date))}
+      ${fieldRow('ประเภท', member.membership_type || '–')}
+    </div>
+    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      📋 Contact Log
+      <button class="btn-ghost" onclick="showLogForm('member','${memberId}')">+ Log</button>
+    </div>
+    <div id="log-form-area-${memberId}"></div>
+    <div id="log-timeline-${memberId}">${renderLogTimeline(Array.isArray(logs) ? logs : [])}</div>
+  `;
+}
+
+// Close panel
+function closeRenewalPanel() {
+  document.getElementById('renewal-panel').classList.remove('active');
+  document.getElementById('renewal-overlay').classList.remove('active');
+}
+document.getElementById('renewal-overlay').addEventListener('click', closeRenewalPanel);
+
+// ═══════════════════════════════════════════
+//  EVENT LISTENERS — NAV
+// ═══════════════════════════════════════════
+document.querySelectorAll('.nav-item[data-nav]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const nav = btn.dataset.nav;
+    if (!nav) return;
+    state.history = [nav];
+    navigate(nav, false);
+    if (nav === 'leads') { loadLeads(); }
+    if (nav === 'renewal') { loadRenewals(); }
+    if (nav === 'home') { loadHomeData(); updateHomeStats(); }
+  });
+});
+
+document.getElementById('fab-add').addEventListener('click', openAddLead);
+
+// Lead filter chips
+document.getElementById('lead-filter-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#lead-filter-chips .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  state.leadFilter = chip.dataset.filter;
+  renderLeads();
+});
+
+// Lead search
+let searchDebounce;
+document.getElementById('lead-search').addEventListener('input', e => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    state.leadSearch = e.target.value;
+    renderLeads();
+  }, 200);
+});
+
+// Renewal tabs
+document.getElementById('renewal-tabs').addEventListener('click', e => {
+  const item = e.target.closest('.tab-bar-item');
+  if (!item) return;
+  document.querySelectorAll('.tab-bar-item').forEach(t => t.classList.remove('active'));
+  item.classList.add('active');
+  state.renewalTab = item.dataset.tab;
+  renderRenewals();
+});
+
+// Renewal sort
+document.getElementById('renewal-sort').addEventListener('change', e => {
+  state.renewalSort = e.target.value;
+  renderRenewals();
+});
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+function initHome() {
+  const now = new Date();
+  const days = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
+  const d = now.getDate();
+  const m = THAI_MONTHS[now.getMonth()];
+  const y = now.getFullYear() + 543;
+  document.getElementById('home-date').textContent = `วัน${days[now.getDay()]}ที่ ${d} ${m} ${y}`;
+
+  const h = now.getHours();
+  let greet = 'สวัสดีตอนเช้า ☀️';
+  if (h >= 12 && h < 17) greet = 'สวัสดีตอนบ่าย 🌤';
+  else if (h >= 17) greet = 'สวัสดีตอนเย็น 🌙';
+  document.getElementById('home-greeting').textContent = greet;
+}
+
+async function init() {
+  initHome();
+  navigate('home', false);
+  state.history = ['home'];
+  await loadStaff();
+  loadHomeData();
+  loadLeads();
+}
+
+init();
+</script>
+</body>
+</html>

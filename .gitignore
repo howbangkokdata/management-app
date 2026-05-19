@@ -1,0 +1,14 @@
+# Backups
+index.backup.*.html
+
+# Raw data files
+*.xlsx
+
+# Firebase
+.firebase/
+
+# Claude Code
+.claude/
+
+# Playwright artifacts
+.playwright-mcp/

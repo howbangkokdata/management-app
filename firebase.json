@@ -1,0 +1,23 @@
+{
+  "hosting": {
+    "site": "howbkkdb",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "HOW_Dashboard_PRD.md",
+      "how_dashboard.html"
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "rewrites": [
+      {
+        "source": "/key_setup",
+        "destination": "/key_setup.html"
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

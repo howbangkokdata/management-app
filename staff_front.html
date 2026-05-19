@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HOW Front Desk</title>
+  <script src="supabase_key.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1a1a;
+    --surface: #242424;
+    --surface2: #2e2e2e;
+    --surface3: #333;
+    --border: #3a3a3a;
+    --text: #e8e8e8;
+    --text2: #a0a0a0;
+    --text3: #555;
+    --accent: #c9a84c;
+    --accent-dim: rgba(201,168,76,0.15);
+    --green: #22c55e;
+    --green-bg: #052e16;
+    --red: #ef4444;
+    --red-bg: #3a1010;
+    --amber: #f59e0b;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    overscroll-behavior: none;
+  }
+
+  /* ── Layout ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 80px;
+    display: none;
+  }
+  .view.active { display: block; }
+
+  /* ── Bottom nav ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 10px 4px 8px;
+    min-height: 44px;
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .nav-btn .nav-icon { font-size: 22px; line-height: 1; }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn:active { opacity: 0.7; }
+
+  /* ── PIN screen ── */
+  #pin-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    gap: 32px;
+    padding: 24px;
+  }
+  #pin-screen .logo {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  #pin-screen .subtitle { color: var(--text2); font-size: 14px; text-align: center; }
+  .pin-dots {
+    display: flex; gap: 16px;
+  }
+  .pin-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--surface3);
+    border: 2px solid var(--border);
+    transition: all 0.15s;
+  }
+  .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+  .pin-dot.error { background: var(--red); border-color: var(--red); }
+  .pin-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 280px;
+  }
+  .pin-key {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    padding: 18px 0;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+    text-align: center;
+  }
+  .pin-key:active { background: var(--surface3); transform: scale(0.95); }
+  .pin-key.del { font-size: 18px; color: var(--text2); }
+  .pin-error-msg { color: var(--red); font-size: 13px; min-height: 20px; }
+
+  /* ── Typography helpers ── */
+  .page-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .section-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .card + .card { margin-top: 10px; }
+
+  /* ── Stat cards (Home) ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stat-icon { font-size: 24px; }
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-label { font-size: 12px; color: var(--text2); font-weight: 500; }
+
+  /* ── Primary button ── */
+  .btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    background: var(--accent);
+    color: #1a1400;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+
+  .btn-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-secondary:active { background: var(--surface3); }
+
+  .btn-danger {
+    background: var(--red-bg);
+    color: var(--red);
+    border-color: rgba(239,68,68,0.3);
+  }
+  .btn-danger:active { opacity: 0.8; }
+
+  /* ── Check-in list item ── */
+  .checkin-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .checkin-item:last-child { border-bottom: none; }
+  .ci-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    border: 1.5px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: var(--accent);
+    flex-shrink: 0;
+  }
+  .ci-name { font-weight: 600; font-size: 14px; }
+  .ci-time { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .ci-meta { flex: 1; min-width: 0; }
+  .ci-badge { font-size: 11px; color: var(--text2); background: var(--surface2); padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border); }
+
+  /* ── Date display (Home) ── */
+  .home-date {
+    margin-bottom: 20px;
+  }
+  .home-date .date-line {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .home-date .day-line {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  /* ── Search input ── */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    padding: 13px 16px 13px 44px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text3); }
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  /* ── Member result card ── */
+  .member-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .member-card:active { background: var(--surface2); border-color: var(--accent); }
+  .member-card .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: var(--accent);
+    flex-shrink: 0;
+  }
+  .member-card .avatar.expired {
+    background: rgba(239,68,68,0.1);
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .member-card .avatar.unknown {
+    background: var(--surface3);
+    border-color: var(--text3);
+    color: var(--text3);
+  }
+  .member-info { flex: 1; min-width: 0; }
+  .member-nickname { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .member-fullname { font-size: 12px; color: var(--text2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .member-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .member-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+
+  /* ── Status badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge.active { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .badge.expired { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .badge.unknown { background: var(--surface3); color: var(--text3); border: 1px solid var(--border); }
+
+  /* ── Confirmation card ── */
+  .confirm-card {
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .confirm-card .big-avatar {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    border: 3px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 700; color: var(--accent);
+    margin: 0 auto 14px;
+  }
+  .confirm-card h2 {
+    font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 4px;
+  }
+  .confirm-card .sub { text-align: center; color: var(--text2); font-size: 14px; margin-bottom: 16px; }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-row .label { color: var(--text2); }
+  .info-row .val { font-weight: 600; color: var(--text); }
+
+  /* ── Checkin type selector ── */
+  .type-selector {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .type-btn {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 13px 4px;
+    min-height: 44px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .type-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+  .type-btn:active { opacity: 0.8; }
+
+  /* ── Success overlay ── */
+  .success-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5,46,22,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 500;
+    padding: 24px;
+    text-align: center;
+  }
+  .success-overlay .check-icon { font-size: 72px; }
+  .success-overlay h2 { font-size: 26px; font-weight: 700; color: var(--green); }
+  .success-overlay p { color: var(--text2); font-size: 15px; line-height: 1.6; }
+
+  /* ── Profile view ── */
+  .profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0 8px;
+    margin-bottom: 16px;
+  }
+  .profile-header .big-avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; font-weight: 700;
+    margin-bottom: 12px;
+    border: 3px solid;
+  }
+  .profile-header .big-avatar.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .profile-header .big-avatar.expired { background: rgba(239,68,68,0.1); border-color: var(--red); color: var(--red); }
+  .profile-header .big-avatar.unknown { background: var(--surface3); border-color: var(--text3); color: var(--text3); }
+  .profile-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .profile-header .fullname { font-size: 14px; color: var(--text2); margin-bottom: 8px; }
+
+  /* ── Note item ── */
+  .note-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .note-item:last-child { border-bottom: none; }
+  .note-text { font-size: 14px; color: var(--text); margin-bottom: 6px; line-height: 1.5; }
+  .note-footer { display: flex; gap: 8px; align-items: center; }
+  .note-type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .note-type-badge.general { background: var(--surface3); color: var(--text2); }
+  .note-type-badge.complaint { background: var(--red-bg); color: var(--red); }
+  .note-type-badge.compliment { background: var(--green-bg); color: var(--green); }
+  .note-type-badge.follow_up { background: rgba(245,158,11,0.15); color: var(--amber); }
+  .note-date { font-size: 11px; color: var(--text3); }
+  .note-by { font-size: 11px; color: var(--text3); }
+
+  /* ── Add note view ── */
+  .note-textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    padding: 14px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.15s;
+    min-height: 120px;
+    margin-bottom: 14px;
+  }
+  .note-textarea:focus { border-color: var(--accent); }
+  .note-textarea::placeholder { color: var(--text3); }
+
+  .note-type-selector {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .note-type-btn {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 13px 12px;
+    min-height: 44px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .note-type-btn.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+  .note-type-btn:active { opacity: 0.8; }
+
+  .text-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 16px;
+  }
+  .text-input:focus { border-color: var(--accent); }
+
+  /* ── Back button ── */
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+  .back-btn:active { color: var(--accent); }
+
+  /* ── Loading / empty states ── */
+  .spinner {
+    display: flex; align-items: center; justify-content: center;
+    padding: 32px;
+    color: var(--text3);
+    font-size: 14px;
+    gap: 10px;
+  }
+  .spin {
+    width: 20px; height: 20px;
+    border: 2px solid var(--surface3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+    font-size: 14px;
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface3);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.25s;
+    z-index: 600;
+    max-width: calc(100% - 40px);
+    text-align: center;
+    border: 1px solid var(--border);
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { background: var(--green-bg); color: var(--green); border-color: rgba(34,197,94,0.3); }
+  #toast.error { background: var(--red-bg); color: var(--red); border-color: rgba(239,68,68,0.3); }
+
+  /* ── Misc ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .gap-8 { gap: 8px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-12 { margin-bottom: 12px; }
+  .text-center { text-align: center; }
+  .text-sm { font-size: 13px; }
+  .text-muted { color: var(--text2); }
+
+  /* ── Loading screen ── */
+  #loading-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 998; gap: 16px;
+  }
+  #loading-screen .logo { font-size: 28px; font-weight: 700; color: var(--accent); letter-spacing: 2px; }
+  #loading-screen .sub { font-size: 13px; color: var(--text2); }
+
+/* QR SCANNER MODAL */
+#qr-modal { position:fixed; inset:0; z-index:300; background:#000; display:flex; flex-direction:column; }
+#qr-modal.hidden { display:none; }
+#qr-video { flex:1; width:100%; height:100%; object-fit:cover; }
+.qr-scan-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+.qr-frame { width:220px; height:220px; border:3px solid #c9a84c; border-radius:16px; box-shadow:0 0 0 9999px rgba(0,0,0,0.55); position:relative; }
+.qr-frame::before, .qr-frame::after { content:''; position:absolute; width:28px; height:28px; border-color:#c9a84c; border-style:solid; }
+.qr-frame::before { top:-3px; left:-3px; border-width:4px 0 0 4px; border-radius:14px 0 0 0; }
+.qr-frame::after  { bottom:-3px; right:-3px; border-width:0 4px 4px 0; border-radius:0 0 14px 0; }
+.qr-tip { color:#fff; font-size:14px; margin-top:24px; opacity:.9; text-shadow:0 1px 3px rgba(0,0,0,.8); }
+.qr-close { position:absolute; top:calc(env(safe-area-inset-top, 0px) + 16px); right:16px; width:44px; height:44px; background:rgba(255,255,255,.18); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; color:#fff; border:none; cursor:pointer; pointer-events:auto; }
+</style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading-screen">
+  <div class="logo">HOW BKK</div>
+  <div class="spin" style="width:28px;height:28px;"></div>
+  <div class="sub">กำลังโหลด...</div>
+</div>
+
+<!-- PIN screen -->
+<div id="pin-screen" style="display:none;">
+  <div>
+    <div class="logo" style="text-align:center;">HOW BKK</div>
+    <div class="subtitle" style="margin-top:6px;">Front Desk Dashboard</div>
+  </div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+  </div>
+  <div class="pin-error-msg" id="pin-error"></div>
+  <div class="pin-keypad">
+    <button class="pin-key" onclick="pinPress('1')">1</button>
+    <button class="pin-key" onclick="pinPress('2')">2</button>
+    <button class="pin-key" onclick="pinPress('3')">3</button>
+    <button class="pin-key" onclick="pinPress('4')">4</button>
+    <button class="pin-key" onclick="pinPress('5')">5</button>
+    <button class="pin-key" onclick="pinPress('6')">6</button>
+    <button class="pin-key" onclick="pinPress('7')">7</button>
+    <button class="pin-key" onclick="pinPress('8')">8</button>
+    <button class="pin-key" onclick="pinPress('9')">9</button>
+    <button class="pin-key" style="visibility:hidden;">-</button>
+    <button class="pin-key" onclick="pinPress('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app" style="display:none;">
+
+  <!-- View 1: Home -->
+  <div id="view-home" class="view active">
+    <div class="home-date">
+      <div class="date-line" id="home-date-line">—</div>
+      <div class="day-line" id="home-day-line">—</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value" id="stat-checkins">—</div>
+        <div class="stat-label">Check-in วันนี้</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="stat-active">—</div>
+        <div class="stat-label">สมาชิก Active</div>
+      </div>
+    </div>
+
+    <button class="btn-primary mb-12" onclick="navTo('checkin')">
+      🚀 Check-in Member
+    </button>
+
+    <div class="section-label">Check-in ล่าสุดวันนี้</div>
+    <div class="card" id="home-recent-list">
+      <div class="spinner"><div class="spin"></div></div>
+    </div>
+  </div>
+
+  <!-- View 2: Check-in -->
+  <div id="view-checkin" class="view">
+    <div class="page-title">✅ Check-in Member</div>
+
+    <div id="checkin-search-phase">
+      <button class="btn-secondary" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="openQRScanner()">
+        📷 <span>Scan QR Code</span>
+      </button>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="search" class="search-input" id="checkin-search" placeholder="ค้นหาชื่อสมาชิก (active)..." autocomplete="off" oninput="searchCheckin(this.value)">
+      </div>
+
+      <div class="section-label">ประเภทการ Check-in</div>
+      <div class="type-selector" id="type-selector">
+        <button class="type-btn selected" data-type="general" onclick="selectType(this)">General</button>
+        <button class="type-btn" data-type="event" onclick="selectType(this)">Event</button>
+        <button class="type-btn" data-type="class" onclick="selectType(this)">Class</button>
+        <button class="type-btn" data-type="guest" onclick="selectType(this)">Guest</button>
+      </div>
+
+      <div id="checkin-results"></div>
+    </div>
+
+    <div id="checkin-confirm-phase" style="display:none;">
+      <button class="back-btn" onclick="resetCheckin()">← กลับ</button>
+      <div class="confirm-card" id="confirm-card-content"></div>
+      <button class="btn-primary" id="confirm-btn" onclick="doCheckin()">✅ ยืนยัน Check-in</button>
+    </div>
+  </div>
+
+  <!-- View 3: Member Search -->
+  <div id="view-search" class="view">
+    <div class="page-title">🔍 ค้นหาสมาชิก</div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="search" class="search-input" id="member-search" placeholder="ชื่อ, ชื่อจริง, เบอร์โทร..." autocomplete="off" oninput="searchMembers(this.value)">
+    </div>
+    <div id="member-results">
+      <div class="empty-state">
+        <div class="icon">👥</div>
+        <div>พิมพ์ชื่อหรือเบอร์เพื่อค้นหา</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View 4: Member Profile -->
+  <div id="view-profile" class="view">
+    <button class="back-btn" id="profile-back-btn" onclick="goBackFromProfile()">← กลับ</button>
+    <div class="profile-header" id="profile-header"></div>
+    <div class="card" id="profile-info-card"></div>
+    <div class="section-label">ประวัติ Check-in ล่าสุด</div>
+    <div class="card" id="profile-checkin-history"></div>
+    <div class="section-label">บันทึก</div>
+    <div class="card" id="profile-notes-list"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;padding-bottom:8px;">
+      <button class="btn-secondary" style="flex:1;" onclick="goToAddNote()">➕ เพิ่มบันทึก</button>
+      <button class="btn-primary" style="flex:1;" onclick="checkinFromProfile()">✅ Check-in</button>
+    </div>
+  </div>
+
+  <!-- View 5: Add Note -->
+  <div id="view-note" class="view">
+    <button class="back-btn" onclick="showView('profile')">← กลับ</button>
+    <div class="page-title">📝 เพิ่มบันทึก</div>
+    <div class="card mb-12" id="note-member-card"></div>
+
+    <div class="section-label">บันทึก</div>
+    <textarea class="note-textarea" id="note-text" placeholder="บันทึก..."></textarea>
+
+    <div class="section-label">ประเภทบันทึก</div>
+    <div class="note-type-selector">
+      <button class="note-type-btn selected" data-ntype="general" onclick="selectNoteType(this)">📋 ทั่วไป</button>
+      <button class="note-type-btn" data-ntype="complaint" onclick="selectNoteType(this)">😤 Complaint</button>
+      <button class="note-type-btn" data-ntype="compliment" onclick="selectNoteType(this)">😊 Compliment</button>
+      <button class="note-type-btn" data-ntype="follow_up" onclick="selectNoteType(this)">🔔 Follow Up</button>
+    </div>
+
+    <div class="section-label">บันทึกโดย</div>
+    <input type="text" class="text-input" id="note-recorded-by" value="Front Desk" placeholder="ชื่อผู้บันทึก">
+
+    <button class="btn-primary" onclick="submitNote()">💾 บันทึก</button>
+  </div>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="navTo('home')">
+      <span class="nav-icon">🏠</span>หน้าหลัก
+    </button>
+    <button class="nav-btn" id="nav-checkin" onclick="navTo('checkin')">
+      <span class="nav-icon">✅</span>Check-in
+    </button>
+    <button class="nav-btn" id="nav-search" onclick="navTo('search')">
+      <span class="nav-icon">🔍</span>ค้นหา
+    </button>
+  </nav>
+</div>
+
+<!-- QR Scanner Modal -->
+<div id="qr-modal" class="hidden">
+  <video id="qr-video" autoplay playsinline muted></video>
+  <div class="qr-scan-overlay">
+    <div class="qr-frame"></div>
+    <div class="qr-tip">จ่อ QR Code ของสมาชิก</div>
+  </div>
+  <button class="qr-close" onclick="closeQRScanner()">✕</button>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────
+const SB_URL = 'https://argdnwhxwykdwrwkojyb.supabase.co';
+const SB_KEY = window.HowSupabaseKey ? window.HowSupabaseKey.get() : '';
+const CORRECT_PIN = '2468';
+const DAYS_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Thai month names for Buddhist-Era-safe date formatting
+const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  return d.getDate() + ' ' + MONTHS_TH[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+// ── State ────────────────────────────────────────────────
+let currentView = 'home';
+let profileFromView = 'search'; // track where profile was opened from
+let selectedCheckinType = 'general';
+let selectedNoteType = 'general';
+let selectedMemberForCheckin = null; // full member object
+let selectedMemberForProfile = null;
+let searchCheckinTimer = null;
+let searchMemberTimer = null;
+
+// ── Supabase helpers ─────────────────────────────────────
+async function sbFetch(path, options = {}) {
+  const url = `${SB_URL}/rest/v1/${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || 'return=representation',
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || res.statusText);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+function sbGet(path) { return sbFetch(path, { method: 'GET', prefer: '' }); }
+
+function sbPost(table, body) {
+  return sbFetch(table, { method: 'POST', body: JSON.stringify(body), prefer: 'return=representation' });
+}
+
+function sbPatch(path, body) {
+  return sbFetch(path, { method: 'PATCH', body: JSON.stringify(body), prefer: 'return=representation' });
+}
+
+// ── Date / time utils ────────────────────────────────────
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function formatDateShort(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return isoStr;
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function formatDateTime(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return isoStr;
+  const h = String(d.getHours()).padStart(2,'0');
+  const m = String(d.getMinutes()).padStart(2,'0');
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}, ${h}:${m}`;
+}
+
+function formatTimeOnly(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return '';
+  return d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit', hour12: false});
+}
+
+function todayLabel() {
+  const d = new Date();
+  const day = DAYS_TH[d.getDay()];
+  const dd = d.getDate();
+  const mm = MONTHS_EN[d.getMonth()];
+  const yyyy = d.getFullYear();
+  return { date: `${dd} ${mm} ${yyyy}`, day: `วัน${day}` };
+}
+
+function getInitial(name) {
+  if (!name) return '?';
+  return name.trim()[0].toUpperCase();
+}
+
+function statusBadgeHtml(status) {
+  const map = {
+    active: { cls: 'active', label: 'Active' },
+    expired: { cls: 'expired', label: 'Expired' },
+  };
+  const s = map[status] || { cls: 'unknown', label: status || 'Unknown' };
+  return `<span class="badge ${s.cls}">${s.label}</span>`;
+}
+
+function avatarClass(status) {
+  if (status === 'active') return 'active';
+  if (status === 'expired') return 'expired';
+  return 'unknown';
+}
+
+// ── Toast ────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 2800);
+}
+
+// ── PIN Auth ─────────────────────────────────────────────
+let pinBuffer = '';
+
+function pinPress(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updatePinDots();
+  if (pinBuffer.length === 4) {
+    setTimeout(checkPin, 100);
+  }
+}
+
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots(false);
+  document.getElementById('pin-error').textContent = '';
+}
+
+function updatePinDots(shake = false) {
+  const dots = document.querySelectorAll('.pin-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('filled', i < pinBuffer.length);
+    d.classList.remove('error');
+  });
+}
+
+function checkPin() {
+  if (pinBuffer === CORRECT_PIN) {
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    initApp();
+  } else {
+    document.querySelectorAll('.pin-dot').forEach(d => {
+      d.classList.remove('filled');
+      d.classList.add('error');
+    });
+    document.getElementById('pin-error').textContent = 'PIN ไม่ถูกต้อง ลองอีกครั้ง';
+    setTimeout(() => {
+      pinBuffer = '';
+      updatePinDots();
+    }, 800);
+  }
+}
+
+// ── Navigation ───────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  currentView = name;
+  // Scroll to top
+  document.getElementById('view-' + name).scrollTop = 0;
+}
+
+function navTo(name) {
+  // Update bottom nav highlight
+  ['home','checkin','search'].forEach(n => {
+    document.getElementById('nav-' + n).classList.toggle('active', n === name);
+  });
+  if (name === 'home') {
+    showView('home');
+    loadHomeData();
+  } else if (name === 'checkin') {
+    showView('checkin');
+    resetCheckin();
+    setTimeout(() => document.getElementById('checkin-search').focus(), 200);
+  } else if (name === 'search') {
+    showView('search');
+    document.getElementById('member-search').value = '';
+    document.getElementById('member-results').innerHTML = `<div class="empty-state"><div class="icon">👥</div><div>พิมพ์ชื่อหรือเบอร์เพื่อค้นหา</div></div>`;
+    setTimeout(() => document.getElementById('member-search').focus(), 200);
+  }
+}
+
+function goBackFromProfile() {
+  if (profileFromView === 'checkin') {
+    navTo('checkin');
+  } else {
+    navTo('search');
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────
+function initApp() {
+  const lbl = todayLabel();
+  document.getElementById('home-date-line').textContent = lbl.date;
+  document.getElementById('home-day-line').textContent = lbl.day;
+  loadHomeData();
+  checkURLCheckin();
+}
+
+async function loadHomeData() {
+  // Stats
+  const today = todayISO();
+  try {
+    // Check-ins today
+    const ciRes = await sbGet(`check_ins?checkin_at=gte.${today}T00:00:00&checkin_at=lt.${today}T23:59:59.999&select=id`);
+    document.getElementById('stat-checkins').textContent = Array.isArray(ciRes) ? ciRes.length : '0';
+  } catch(e) {
+    document.getElementById('stat-checkins').textContent = '0';
+  }
+
+  try {
+    // Active members — use count via range header
+    const res = await fetch(`${SB_URL}/rest/v1/members?membership_status=eq.active&select=id`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' }
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new Error(errText || res.statusText);
+    }
+    const count = res.headers.get('content-range');
+    if (count) {
+      const total = count.split('/')[1];
+      document.getElementById('stat-active').textContent = total !== '*' ? total : '—';
+    } else {
+      const data = await res.json();
+      document.getElementById('stat-active').textContent = Array.isArray(data) ? data.length : '—';
+    }
+  } catch(e) {
+    document.getElementById('stat-active').textContent = '—';
+    showToast('โหลดจำนวนสมาชิกไม่สำเร็จ: ' + e.message, 'error');
+  }
+
+  // Recent check-ins
+  try {
+    const today = todayISO();
+    const recent = await sbGet(`check_ins?checkin_at=gte.${today}T00:00:00&order=checkin_at.desc&limit=5&select=id,checkin_at,checkin_type,member_id,members(nickname)`);
+    renderRecentCheckins(recent);
+  } catch(e) {
+    document.getElementById('home-recent-list').innerHTML = `<div class="empty-state" style="padding:16px 0 4px;"><div>ไม่สามารถโหลดข้อมูลได้</div></div>`;
+  }
+}
+
+function renderRecentCheckins(list) {
+  const el = document.getElementById('home-recent-list');
+  if (!list || list.length === 0) {
+    el.innerHTML = `<div class="empty-state" style="padding:16px 0 4px;"><div class="icon">📭</div><div>ยังไม่มี check-in วันนี้</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(ci => {
+    const nickname = (ci.members && ci.members.nickname) ? ci.members.nickname : ('Member #' + (ci.member_id || '?'));
+    const initial = getInitial(nickname);
+    const time = formatTimeOnly(ci.checkin_at);
+    const typeLabel = { general:'General', event:'Event', class:'Class', guest:'Guest' }[ci.checkin_type] || ci.checkin_type;
+    return `<div class="checkin-item">
+      <div class="ci-avatar">${initial}</div>
+      <div class="ci-meta">
+        <div class="ci-name">${nickname}</div>
+        <div class="ci-time">${time}</div>
+      </div>
+      <span class="ci-badge">${typeLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Check-in View ────────────────────────────────────────
+function selectType(btn) {
+  document.querySelectorAll('#type-selector .type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedCheckinType = btn.dataset.type;
+}
+
+function resetCheckin() {
+  selectedMemberForCheckin = null;
+  document.getElementById('checkin-search-phase').style.display = '';
+  document.getElementById('checkin-confirm-phase').style.display = 'none';
+  document.getElementById('checkin-results').innerHTML = '';
+  const inp = document.getElementById('checkin-search');
+  if (inp) inp.value = '';
+}
+
+function searchCheckin(q) {
+  clearTimeout(searchCheckinTimer);
+  if (!q || q.trim().length < 1) {
+    document.getElementById('checkin-results').innerHTML = '';
+    return;
+  }
+  document.getElementById('checkin-results').innerHTML = `<div class="spinner"><div class="spin"></div> กำลังค้นหา...</div>`;
+  searchCheckinTimer = setTimeout(() => doSearchCheckin(q.trim()), 300);
+}
+
+async function doSearchCheckin(q) {
+  try {
+    const enc = encodeURIComponent(q);
+    const data = await sbGet(`members?nickname=ilike.*${enc}*&membership_status=eq.active&select=id,nickname,fullname,membership_status,end_date&limit=10`);
+    renderCheckinResults(data);
+  } catch(e) {
+    document.getElementById('checkin-results').innerHTML = `<div class="empty-state"><div>เกิดข้อผิดพลาด: ${e.message}</div></div>`;
+  }
+}
+
+function renderCheckinResults(list) {
+  const el = document.getElementById('checkin-results');
+  if (!list || list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><div>ไม่พบสมาชิก active</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(m => memberCardHtml(m, `selectMemberForCheckin('${m.id}')`)).join('');
+}
+
+function memberCardHtml(m, onclick) {
+  const initial = getInitial(m.nickname || m.fullname);
+  const avClass = avatarClass(m.membership_status);
+  const end = m.end_date ? formatDateShort(m.end_date) : '—';
+  return `<div class="member-card" onclick="${onclick}">
+    <div class="avatar ${avClass}">${initial}</div>
+    <div class="member-info">
+      <div class="member-nickname">${m.nickname || '—'}</div>
+      <div class="member-fullname">${m.fullname || ''}</div>
+      <div class="member-meta">หมดอายุ: ${end}</div>
+    </div>
+    <div class="member-right">
+      ${statusBadgeHtml(m.membership_status)}
+    </div>
+  </div>`;
+}
+
+// Store members map for quick lookup
+const memberCache = {};
+
+async function selectMemberForCheckin(memberId) {
+  // Fetch full member data if not cached
+  let member = memberCache[memberId];
+  if (!member) {
+    try {
+      const res = await sbGet(`members?id=eq.${memberId}&select=id,nickname,fullname,membership_status,end_date,membership_type&limit=1`);
+      member = Array.isArray(res) ? res[0] : res;
+      if (member) memberCache[memberId] = member;
+    } catch(e) {
+      showToast('ไม่สามารถโหลดข้อมูลสมาชิกได้', 'error');
+      return;
+    }
+  }
+  if (!member) return;
+  selectedMemberForCheckin = member;
+  showConfirmCheckin(member);
+}
+
+function showConfirmCheckin(m) {
+  document.getElementById('checkin-search-phase').style.display = 'none';
+  document.getElementById('checkin-confirm-phase').style.display = '';
+
+  const initial = getInitial(m.nickname || m.fullname);
+  const avClass = avatarClass(m.membership_status);
+  const typeLabel = { general:'ทั่วไป', event:'Event', class:'Class', guest:'Guest' }[selectedCheckinType] || selectedCheckinType;
+
+  const now = new Date();
+  const nowStr = now.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit', hour12: false});
+
+  document.getElementById('confirm-card-content').innerHTML = `
+    <div class="big-avatar ${avClass}">${initial}</div>
+    <h2>${m.nickname || '—'}</h2>
+    <div class="sub">${m.fullname || ''}</div>
+    <div class="info-row"><span class="label">สถานะ</span><span class="val">${statusBadgeHtml(m.membership_status)}</span></div>
+    <div class="info-row"><span class="label">ประเภทสมาชิก</span><span class="val">${m.membership_type || '—'}</span></div>
+    <div class="info-row"><span class="label">หมดอายุ</span><span class="val">${m.end_date ? formatDateShort(m.end_date) : '—'}</span></div>
+    <div class="info-row"><span class="label">ประเภท Check-in</span><span class="val">${typeLabel}</span></div>
+    <div class="info-row"><span class="label">เวลา</span><span class="val">${nowStr}</span></div>
+  `;
+}
+
+async function doCheckin() {
+  if (!selectedMemberForCheckin) return;
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังตรวจสอบ...';
+
+  // Duplicate check-in prevention: check if already checked in today
+  try {
+    const today = todayISO();
+    const existing = await sbGet(`check_ins?member_id=eq.${selectedMemberForCheckin.id}&checkin_at=gte.${today}T00:00:00&checkin_at=lt.${today}T23:59:59.999&select=id&limit=1`);
+    if (Array.isArray(existing) && existing.length > 0) {
+      btn.disabled = false;
+      btn.textContent = '✅ ยืนยัน Check-in';
+      showToast('⚠️ สมาชิกนี้ check-in แล้ววันนี้', 'error');
+      return;
+    }
+  } catch(e) {
+    // Non-critical — proceed with check-in if duplicate check fails
+  }
+
+  btn.textContent = 'กำลังบันทึก...';
+
+  try {
+    const now = new Date().toISOString();
+    await sbPost('check_ins', {
+      member_id: selectedMemberForCheckin.id,
+      checkin_at: now,
+      checkin_type: selectedCheckinType,
+      recorded_by: 'Front Desk'
+    });
+
+    // Update last_checkin on member
+    try {
+      await sbPatch(`members?id=eq.${selectedMemberForCheckin.id}`, { last_checkin: todayISO() });
+    } catch(e2) { /* non-critical */ }
+
+    // Show success overlay
+    showSuccessOverlay(selectedMemberForCheckin.nickname || selectedMemberForCheckin.fullname || '—');
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✅ ยืนยัน Check-in';
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+function playSuccessBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.35);
+    osc.onended = () => ctx.close();
+  } catch(e) { /* audio not available */ }
+}
+
+function showSuccessOverlay(nickname) {
+  playSuccessBeep();
+  showToast('✅ Check-in สำเร็จ! ' + nickname, 'success');
+  const overlay = document.createElement('div');
+  overlay.className = 'success-overlay';
+  overlay.innerHTML = `
+    <div class="check-icon">✅</div>
+    <h2>Check-in สำเร็จ!</h2>
+    <p><strong>${escHtml(nickname)}</strong><br>บันทึกเรียบร้อยแล้ว</p>
+  `;
+  document.getElementById('app').appendChild(overlay);
+  setTimeout(() => {
+    overlay.remove();
+    navTo('home');
+    resetCheckin();
+  }, 2000);
+}
+
+// ── Member Search (View 3) ───────────────────────────────
+function searchMembers(q) {
+  clearTimeout(searchMemberTimer);
+  if (!q || q.trim().length < 1) {
+    document.getElementById('member-results').innerHTML = `<div class="empty-state"><div class="icon">👥</div><div>พิมพ์ชื่อหรือเบอร์เพื่อค้นหา</div></div>`;
+    return;
+  }
+  document.getElementById('member-results').innerHTML = `<div class="spinner"><div class="spin"></div> กำลังค้นหา...</div>`;
+  searchMemberTimer = setTimeout(() => doSearchMembers(q.trim()), 300);
+}
+
+async function doSearchMembers(q) {
+  try {
+    const enc = encodeURIComponent(q);
+    const data = await sbGet(`members?or=(nickname.ilike.*${enc}*,fullname.ilike.*${enc}*,phone.ilike.*${enc}*)&select=id,nickname,fullname,membership_status,end_date,phone&limit=20`);
+    renderMemberResults(data);
+  } catch(e) {
+    document.getElementById('member-results').innerHTML = `<div class="empty-state"><div>เกิดข้อผิดพลาด: ${e.message}</div></div>`;
+  }
+}
+
+function renderMemberResults(list) {
+  const el = document.getElementById('member-results');
+  if (!list || list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><div>ไม่พบสมาชิก</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(m => {
+    const initial = getInitial(m.nickname || m.fullname);
+    const avClass = avatarClass(m.membership_status);
+    const end = m.end_date ? formatDateShort(m.end_date) : '—';
+    return `<div class="member-card" onclick="openProfile('${m.id}','search')">
+      <div class="avatar ${avClass}">${initial}</div>
+      <div class="member-info">
+        <div class="member-nickname">${m.nickname || '—'}</div>
+        <div class="member-fullname">${m.fullname || ''}</div>
+        <div class="member-meta">${m.phone || ''} ${m.phone && end !== '—' ? '·' : ''} ${end !== '—' ? 'หมดอายุ: ' + end : ''}</div>
+      </div>
+      <div class="member-right">
+        ${statusBadgeHtml(m.membership_status)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Member Profile (View 4) ──────────────────────────────
+async function openProfile(memberId, fromView = 'search') {
+  profileFromView = fromView;
+  // Update bottom nav to reflect origin
+  ['home','checkin','search'].forEach(n => {
+    document.getElementById('nav-' + n).classList.toggle('active', n === fromView);
+  });
+
+  showView('profile');
+  document.getElementById('profile-header').innerHTML = `<div class="spinner"><div class="spin"></div></div>`;
+  document.getElementById('profile-info-card').innerHTML = '';
+  document.getElementById('profile-checkin-history').innerHTML = `<div class="spinner"><div class="spin"></div></div>`;
+  document.getElementById('profile-notes-list').innerHTML = `<div class="spinner"><div class="spin"></div></div>`;
+
+  try {
+    let member = memberCache[memberId];
+    if (!member) {
+      const res = await sbGet(`members?id=eq.${memberId}&select=*&limit=1`);
+      member = Array.isArray(res) ? res[0] : res;
+      if (member) memberCache[memberId] = member;
+    }
+    if (!member) { showToast('ไม่พบข้อมูลสมาชิก', 'error'); return; }
+    selectedMemberForProfile = member;
+    renderProfileHeader(member);
+    renderProfileInfo(member);
+  } catch(e) {
+    document.getElementById('profile-header').innerHTML = `<div class="empty-state">เกิดข้อผิดพลาด</div>`;
+  }
+
+  // Load check-in history
+  try {
+    const his = await sbGet(`check_ins?member_id=eq.${memberId}&order=checkin_at.desc&limit=5&select=id,checkin_at,checkin_type`);
+    renderProfileCheckins(his);
+  } catch(e) {
+    document.getElementById('profile-checkin-history').innerHTML = `<div class="empty-state" style="padding:8px 0;"><div>ไม่สามารถโหลดได้</div></div>`;
+  }
+
+  // Load notes
+  try {
+    const notes = await sbGet(`member_notes?member_id=eq.${memberId}&order=created_at.desc&limit=3&select=id,note,note_type,created_by,created_at`);
+    renderProfileNotes(notes);
+  } catch(e) {
+    document.getElementById('profile-notes-list').innerHTML = `<div class="empty-state" style="padding:8px 0;"><div>ไม่สามารถโหลดได้</div></div>`;
+  }
+}
+
+function renderProfileHeader(m) {
+  const initial = getInitial(m.nickname || m.fullname);
+  const avClass = avatarClass(m.membership_status);
+  document.getElementById('profile-header').innerHTML = `
+    <div class="big-avatar ${avClass}">${initial}</div>
+    <h1>${m.nickname || '—'}</h1>
+    <div class="fullname">${m.fullname || ''}</div>
+    ${statusBadgeHtml(m.membership_status)}
+  `;
+}
+
+function renderProfileInfo(m) {
+  document.getElementById('profile-info-card').innerHTML = `
+    <div class="info-row"><span class="label">เบอร์โทร</span><span class="val">${m.phone || '—'}</span></div>
+    <div class="info-row"><span class="label">ประเภทสมาชิก</span><span class="val">${m.membership_type || '—'}</span></div>
+    <div class="info-row"><span class="label">วันหมดอายุ</span><span class="val">${m.end_date ? formatDateShort(m.end_date) : '—'}</span></div>
+    <div class="info-row"><span class="label">Sales POC</span><span class="val">${m.sales_poc || '—'}</span></div>
+    <div class="info-row"><span class="label">Check-in ล่าสุด</span><span class="val">${m.last_checkin ? formatDateShort(m.last_checkin) : '—'}</span></div>
+  `;
+}
+
+function renderProfileCheckins(list) {
+  const el = document.getElementById('profile-checkin-history');
+  if (!list || list.length === 0) {
+    el.innerHTML = `<div class="empty-state" style="padding:10px 0 4px;"><div class="icon">📭</div><div>ยังไม่มีประวัติ check-in</div></div>`;
+    return;
+  }
+  const typeLabel = { general:'ทั่วไป', event:'Event', class:'Class', guest:'Guest' };
+  el.innerHTML = list.map(ci => `
+    <div class="checkin-item">
+      <div class="ci-meta">
+        <div class="ci-name">${formatDateTime(ci.checkin_at)}</div>
+      </div>
+      <span class="ci-badge">${typeLabel[ci.checkin_type] || ci.checkin_type}</span>
+    </div>
+  `).join('');
+}
+
+function renderProfileNotes(list) {
+  const el = document.getElementById('profile-notes-list');
+  if (!list || list.length === 0) {
+    el.innerHTML = `<div class="empty-state" style="padding:10px 0 4px;"><div class="icon">📝</div><div>ยังไม่มีบันทึก</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(n => `
+    <div class="note-item">
+      <div class="note-text">${escHtml(n.note)}</div>
+      <div class="note-footer">
+        <span class="note-type-badge ${n.note_type}">${noteTypeLabel(n.note_type)}</span>
+        <span class="note-date">${formatDateShort(n.created_at)}</span>
+        <span class="note-by">· ${n.created_by || '—'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function noteTypeLabel(t) {
+  return { general:'ทั่วไป', complaint:'Complaint', compliment:'Compliment', follow_up:'Follow Up' }[t] || t;
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function goToAddNote() {
+  if (!selectedMemberForProfile) return;
+  const m = selectedMemberForProfile;
+  const initial = getInitial(m.nickname || m.fullname);
+  const avClass = avatarClass(m.membership_status);
+  document.getElementById('note-member-card').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="avatar ${avClass}" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex-shrink:0;background:${avClass==='active'?'var(--accent-dim)':avClass==='expired'?'rgba(239,68,68,0.1)':'var(--surface3)'};border:2px solid ${avClass==='active'?'var(--accent)':avClass==='expired'?'var(--red)':'var(--text3)'};color:${avClass==='active'?'var(--accent)':avClass==='expired'?'var(--red)':'var(--text3)'};">${initial}</div>
+      <div>
+        <div style="font-weight:700;font-size:15px;">${m.nickname || '—'}</div>
+        <div style="font-size:12px;color:var(--text2);">${m.fullname || ''}</div>
+      </div>
+      ${statusBadgeHtml(m.membership_status)}
+    </div>
+  `;
+  document.getElementById('note-text').value = '';
+  selectedNoteType = 'general';
+  document.querySelectorAll('.note-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.ntype === 'general'));
+  document.getElementById('note-recorded-by').value = 'Front Desk';
+  showView('note');
+}
+
+function selectNoteType(btn) {
+  document.querySelectorAll('.note-type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedNoteType = btn.dataset.ntype;
+}
+
+async function submitNote() {
+  if (!selectedMemberForProfile) return;
+  const text = document.getElementById('note-text').value.trim();
+  if (!text) { showToast('กรุณาใส่เนื้อหาบันทึก', 'error'); return; }
+  const by = document.getElementById('note-recorded-by').value.trim() || 'Front Desk';
+
+  const btn = document.querySelector('#view-note .btn-primary');
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+
+  try {
+    await sbPost('member_notes', {
+      member_id: selectedMemberForProfile.id,
+      note: text,
+      note_type: selectedNoteType,
+      created_by: by
+    });
+    showToast('บันทึกเรียบร้อยแล้ว ✅', 'success');
+    showView('profile');
+    // Reload notes
+    const memberId = selectedMemberForProfile.id;
+    try {
+      const notes = await sbGet(`member_notes?member_id=eq.${memberId}&order=created_at.desc&limit=3&select=id,note,note_type,created_by,created_at`);
+      renderProfileNotes(notes);
+    } catch(e2) {}
+  } catch(e) {
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 บันทึก';
+  }
+}
+
+async function checkinFromProfile() {
+  if (!selectedMemberForProfile) return;
+  const m = selectedMemberForProfile;
+  memberCache[m.id] = m;
+  selectedMemberForCheckin = m;
+  selectedCheckinType = 'general';
+
+  // Reset type selector
+  document.querySelectorAll('#type-selector .type-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === 'general'));
+
+  profileFromView = 'profile';
+  showView('checkin');
+  document.getElementById('checkin-search-phase').style.display = 'none';
+  document.getElementById('checkin-confirm-phase').style.display = '';
+  showConfirmCheckin(m);
+}
+
+// ── Startup ──────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Check for existing session
+  const session = sessionStorage.getItem('how_front_auth');
+  if (session === 'ok') {
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    initApp();
+  } else {
+    setTimeout(() => {
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('pin-screen').style.display = 'flex';
+    }, 600);
+  }
+
+  // PIN keyboard support — number keys and Backspace work on the PIN screen
+  document.addEventListener('keydown', (e) => {
+    const pinScreen = document.getElementById('pin-screen');
+    if (!pinScreen || pinScreen.style.display === 'none') return;
+    // Don't intercept if a real input is focused
+    if (document.activeElement && ['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      pinPress(e.key);
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      pinDel();
+    }
+  });
+});
+
+// Patch checkPin to store session
+const _origCheckPin = checkPin;
+function checkPin() {
+  if (pinBuffer === CORRECT_PIN) {
+    sessionStorage.setItem('how_front_auth', 'ok');
+  }
+  _origCheckPin();
+}
+
+// ─── QR CHECK-IN ────────────────────────
+let _qrStream = null, _qrFrame = null;
+
+async function openQRScanner() {
+  const modal = document.getElementById('qr-modal');
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  try {
+    _qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+    const video = document.getElementById('qr-video');
+    video.srcObject = _qrStream;
+    await video.play();
+    if (!('BarcodeDetector' in window)) {
+      showToast('Browser ไม่รองรับ QR Scanner', 'error');
+      closeQRScanner(); return;
+    }
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const tick = () => {
+      if (!_qrStream) return;
+      detector.detect(video).then(codes => {
+        if (codes.length) { handleQRResult(codes[0].rawValue); }
+        else { _qrFrame = requestAnimationFrame(tick); }
+      }).catch(() => { _qrFrame = requestAnimationFrame(tick); });
+    };
+    _qrFrame = requestAnimationFrame(tick);
+  } catch(e) {
+    showToast('ไม่สามารถเปิดกล้องได้', 'error');
+    closeQRScanner();
+  }
+}
+
+function closeQRScanner() {
+  cancelAnimationFrame(_qrFrame);
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  document.getElementById('qr-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+async function handleQRResult(raw) {
+  closeQRScanner();
+  let memberId = raw.trim();
+  try {
+    const url = new URL(raw);
+    const p = url.searchParams.get('checkin');
+    if (p) memberId = p;
+  } catch {}
+  try {
+    showToast('🔍 กำลังค้นหาสมาชิก...', '');
+    navTo('checkin');
+    await selectMemberForCheckin(memberId);
+  } catch(e) {
+    showToast('ไม่พบสมาชิก QR นี้', 'error');
+  }
+}
+
+function checkURLCheckin() {
+  const p = new URLSearchParams(window.location.search);
+  const id = p.get('checkin');
+  if (!id) return;
+  history.replaceState({}, '', location.pathname);
+  setTimeout(() => {
+    navTo('checkin');
+    selectMemberForCheckin(id).catch(() => showToast('ไม่พบสมาชิก', 'error'));
+  }, 600);
+}
+</script>
+</body>
+</html>

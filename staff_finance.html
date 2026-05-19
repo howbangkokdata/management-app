@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HOW Finance — Staff App</title>
+  <script src="supabase_key.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS — HOW Dark Theme
+    ═══════════════════════════════════════════ */
+    :root {
+      --bg:        #1a1a1a;
+      --surface:   #242424;
+      --surface2:  #2e2e2e;
+      --surface3:  #333;
+      --border:    #3a3a3a;
+      --text:      #e8e8e8;
+      --text2:     #a0a0a0;
+      --text3:     #555;
+      --accent:    #c9a84c;
+      --accent-dim:#a07830;
+      --accent-bg: rgba(201,168,76,0.12);
+      --green:     #22c55e;
+      --green-bg:  #052e16;
+      --red:       #ef4444;
+      --red-bg:    #3a1010;
+      --amber:     #f59e0b;
+      --amber-bg:  rgba(245,158,11,0.12);
+      --font:      'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius:    12px;
+      --radius-sm: 8px;
+      --nav-h:     64px;
+      --header-h:  56px;
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100%;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    button { font-family: var(--font); cursor: pointer; border: none; background: none; color: inherit; }
+    input, select, textarea { font-family: var(--font); }
+    a { color: inherit; text-decoration: none; }
+
+    /* ═══════════════════════════════════════════
+       PIN SCREEN
+    ═══════════════════════════════════════════ */
+    #pin-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    #pin-screen.hidden { display: none; }
+    .pin-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 48px;
+      text-align: center;
+      width: 320px;
+    }
+    .pin-logo { font-size: 26px; font-weight: 800; color: var(--accent); letter-spacing: 2px; margin-bottom: 4px; }
+    .pin-sub  { color: var(--text2); font-size: 13px; margin-bottom: 28px; }
+    .pin-dots { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
+    .pin-dot  { width: 14px; height: 14px; border-radius: 50%; background: var(--border); transition: background .15s; }
+    .pin-dot.filled { background: var(--accent); }
+    .pin-pad  { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .pin-btn  {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; height: 52px;
+      font-size: 18px; font-weight: 600; color: var(--text);
+      cursor: pointer; transition: background .1s;
+    }
+    .pin-btn:hover { background: var(--surface3); }
+    .pin-btn:active { transform: scale(.95); }
+    .pin-btn.del { font-size: 14px; color: var(--text2); }
+    #pin-error { color: var(--red); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+    /* ═══════════════════════════════════════════
+       APP SHELL
+    ═══════════════════════════════════════════ */
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+      background: var(--bg);
+    }
+
+    /* ═══════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════ */
+    .app-header {
+      position: fixed;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .header-brand { display: flex; align-items: center; gap: 8px; }
+    .header-logo {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #1a1a1a;
+      letter-spacing: 0.5px;
+    }
+    .header-title  { font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .header-sub    { font-size: 10px; color: var(--text2); letter-spacing: 0.5px; }
+    .header-action { display: flex; align-items: center; gap: 8px; }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 500; color: var(--accent);
+      padding: 6px 0;
+    }
+    .header-back-link {
+      font-size: 11px; color: var(--text2);
+      padding: 5px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+
+    /* ═══════════════════════════════════════════
+       PAGE CONTENT
+    ═══════════════════════════════════════════ */
+    .page {
+      display: none;
+      padding-top: var(--header-h);
+      padding-bottom: calc(var(--nav-h) + 16px);
+      min-height: 100vh;
+    }
+    .page.active { display: block; }
+
+    /* ═══════════════════════════════════════════
+       BOTTOM NAV
+    ═══════════════════════════════════════════ */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      height: var(--nav-h);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px;
+      padding: 8px 0;
+      font-size: 10px; font-weight: 500;
+      color: var(--text2);
+      transition: color 0.15s;
+      cursor: pointer;
+    }
+    .nav-item.active { color: var(--accent); }
+    .nav-icon { font-size: 20px; line-height: 1; }
+
+    /* ═══════════════════════════════════════════
+       STATS
+    ═══════════════════════════════════════════ */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      padding: 16px;
+    }
+    .stats-row.four { grid-template-columns: repeat(4, 1fr); }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 22px; font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 9px; font-weight: 500;
+      color: var(--text2);
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+    .stat-card.green .stat-number  { color: var(--green); }
+    .stat-card.amber .stat-number  { color: var(--amber); }
+    .stat-card.red   .stat-number  { color: var(--red); }
+
+    /* Value card (full width) */
+    .value-card {
+      margin: 0 16px 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .value-card-label { font-size: 11px; color: var(--text2); font-weight: 500; }
+    .value-card-num   { font-size: 20px; font-weight: 800; color: var(--accent); }
+
+    /* ═══════════════════════════════════════════
+       SECTION
+    ═══════════════════════════════════════════ */
+    .section { padding: 16px; }
+    .section + .section { padding-top: 0; }
+    .section-title {
+      font-size: 12px; font-weight: 700;
+      color: var(--text2);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-title-text { display: flex; align-items: center; gap: 6px; }
+    .section-count {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 2px 7px;
+      font-size: 10px; font-weight: 600;
+      color: var(--text2);
+    }
+    .section-action {
+      font-size: 11px; color: var(--accent);
+      font-weight: 600; cursor: pointer;
+    }
+
+    /* ═══════════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card:active { background: var(--surface2); border-color: var(--accent); }
+    .card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .card-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .card-meta { font-size: 12px; color: var(--text2); margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .card-right { text-align: right; flex-shrink: 0; }
+    .card-price { font-size: 14px; font-weight: 700; color: var(--accent); }
+    .card-date  { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+    /* ═══════════════════════════════════════════
+       BADGES
+    ═══════════════════════════════════════════ */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .badge-green  { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+    .badge-amber  { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+    .badge-gray   { background: rgba(160,160,160,0.12); color: var(--text2); border: 1px solid rgba(160,160,160,0.2); }
+    .badge-gold   { background: var(--accent-bg); color: var(--accent); border: 1px solid rgba(201,168,76,0.25); }
+    .badge-red    { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+
+    /* ═══════════════════════════════════════════
+       SEARCH & FILTER
+    ═══════════════════════════════════════════ */
+    .search-wrap {
+      padding: 12px 16px 8px;
+      position: sticky;
+      top: var(--header-h);
+      background: var(--bg);
+      z-index: 50;
+    }
+    .search-input-wrap { position: relative; }
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px 10px 36px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text2); }
+    .search-icon {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--text2); pointer-events: none; font-size: 15px;
+    }
+
+    .filter-chips {
+      display: flex; gap: 6px;
+      padding: 0 16px 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .chip.active {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ═══════════════════════════════════════════
+       EMPTY & LOADING
+    ═══════════════════════════════════════════ */
+    .empty-state {
+      text-align: center;
+      padding: 40px 24px;
+    }
+    .empty-icon  { font-size: 40px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .empty-sub   { font-size: 13px; color: var(--text2); }
+
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position:  200% 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+    .skel-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 8px;
+    }
+    .skel-line { height: 13px; margin-bottom: 8px; }
+    .skel-line.w80 { width: 80%; }
+    .skel-line.w60 { width: 60%; }
+    .skel-line.w40 { width: 40%; }
+
+    /* ═══════════════════════════════════════════
+       DETAIL SECTIONS
+    ═══════════════════════════════════════════ */
+    .detail-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin: 0 16px 12px;
+      overflow: hidden;
+    }
+    .detail-section-header {
+      padding: 12px 14px;
+      font-size: 12px; font-weight: 700;
+      color: var(--text2);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-row {
+      display: flex;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key { font-size: 12px; color: var(--text2); width: 100px; flex-shrink: 0; padding-top: 1px; }
+    .detail-val { font-size: 13px; color: var(--text); flex: 1; word-break: break-word; }
+
+    /* ═══════════════════════════════════════════
+       PROFILE HEADER
+    ═══════════════════════════════════════════ */
+    .profile-header {
+      padding: 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-name   { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1.2; }
+    .profile-nick   { font-size: 14px; color: var(--text2); margin-top: 2px; }
+    .profile-badges { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+    /* ═══════════════════════════════════════════
+       FINANCIAL BREAKDOWN CARD
+    ═══════════════════════════════════════════ */
+    .finance-breakdown {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin: 0 16px 12px;
+      overflow: hidden;
+    }
+    .finance-breakdown-header {
+      padding: 10px 14px;
+      font-size: 12px; font-weight: 700;
+      color: var(--text2);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .finance-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .finance-row:last-child { border-bottom: none; }
+    .finance-row-key  { color: var(--text2); }
+    .finance-row-val  { font-weight: 600; color: var(--text); }
+    .finance-row.total .finance-row-key  { color: var(--text); font-weight: 700; font-size: 14px; }
+    .finance-row.total .finance-row-val  { color: var(--accent); font-size: 16px; font-weight: 800; }
+
+    /* ═══════════════════════════════════════════
+       FORMS
+    ═══════════════════════════════════════════ */
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 12px; font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .form-control {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-control:focus { border-color: var(--accent); }
+    .form-control::placeholder { color: var(--text2); }
+    .form-control[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
+    textarea.form-control { resize: vertical; min-height: 80px; }
+    select.form-control {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    /* ═══════════════════════════════════════════
+       BUTTONS
+    ═══════════════════════════════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 11px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 600;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #1a1a1a;
+      width: 100%;
+    }
+    .btn-primary:active { background: var(--accent-dim); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 100%;
+    }
+    .btn-secondary:active { background: var(--border); }
+    .btn-ghost { color: var(--accent); padding: 8px 0; font-size: 13px; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(26,26,26,0.3);
+      border-top-color: #1a1a1a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .btn-primary.loading .spinner  { display: inline-block; }
+    .btn-primary.loading .btn-text { display: none; }
+
+    /* ═══════════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════════ */
+    #toast-container {
+      position: fixed;
+      top: calc(var(--header-h) + 8px);
+      left: 50%; transform: translateX(-50%);
+      z-index: 9998;
+      display: flex; flex-direction: column; gap: 6px;
+      width: calc(100% - 32px);
+      max-width: 448px;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      animation: slideDown 0.25s ease;
+      pointer-events: auto;
+    }
+    .toast-success { background: #1C7048; color: #fff; }
+    .toast-error   { background: #c0392b; color: #fff; }
+    .toast-warn    { background: var(--amber); color: #1a1a1a; }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════
+       HOME special
+    ═══════════════════════════════════════════ */
+    .home-welcome { padding: 16px 16px 0; }
+    .home-greeting { font-size: 18px; font-weight: 700; color: var(--text); }
+    .home-date     { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    /* Quick action buttons on home */
+    .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 16px; }
+    .qa-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 10px;
+      font-size: 12px; font-weight: 600; color: var(--text);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .qa-btn:active { background: var(--surface2); border-color: var(--accent); }
+    .qa-btn-icon { font-size: 20px; margin-bottom: 4px; }
+
+    /* ═══════════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════════ */
+    .divider { height: 1px; background: var(--border); margin: 0 16px; }
+
+    /* Mobile overflow guard */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 100%; border-collapse: collapse; }
+
+    /* Edit page form wrapper */
+    .form-wrap {
+      padding: 16px;
+    }
+    .form-section-title {
+      font-size: 11px; font-weight: 700;
+      color: var(--text3);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin: 16px 0 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ PIN SCREEN ═══ -->
+<div id="pin-screen">
+  <div class="pin-box">
+    <div class="pin-logo">HOW</div>
+    <div class="pin-sub">Finance Management</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+      <div class="pin-dot" id="d4"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn" onclick="pinPress('')"></button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    </div>
+    <div id="pin-error"></div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+
+  <!-- ── TOAST ── -->
+  <div id="toast-container"></div>
+
+  <!-- ── HEADER ── -->
+  <header class="app-header" id="app-header">
+    <div class="header-left" id="header-left">
+      <div class="header-brand">
+        <div class="header-logo">HOW</div>
+        <div>
+          <div class="header-title" id="header-title">Finance</div>
+          <div class="header-sub">HOW Bangkok</div>
+        </div>
+      </div>
+    </div>
+    <div class="header-action">
+      <a href="index.html" class="header-back-link">← Dashboard</a>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 1: HOME
+  ══════════════════════════════════════════════ -->
+  <div id="view-home" class="page active">
+    <div class="home-welcome">
+      <div class="home-greeting" id="home-greeting">สวัสดี 👋</div>
+      <div class="home-date" id="home-date"></div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="stats-row four" id="home-stats">
+      <div class="stat-card"><div class="stat-number" id="stat-total">—</div><div class="stat-label">Contracts<br>ทั้งหมด</div></div>
+      <div class="stat-card green"><div class="stat-number" id="stat-paid">—</div><div class="stat-label">Paid<br>ปีนี้</div></div>
+      <div class="stat-card amber"><div class="stat-number" id="stat-pending">—</div><div class="stat-label">Pending<br>รอชำระ</div></div>
+      <div class="stat-card"><div class="stat-number" id="stat-confirm">—</div><div class="stat-label">รอ<br>ยืนยัน</div></div>
+    </div>
+
+    <!-- Total Value -->
+    <div class="value-card" id="home-value-card">
+      <div class="value-card-label">มูลค่า Contracts ทั้งหมด (ปีนี้)</div>
+      <div class="value-card-num" id="stat-value">—</div>
+    </div>
+
+    <!-- Recent Contracts -->
+    <div class="section" style="padding-top:16px;">
+      <div class="section-title">
+        <div class="section-title-text">📋 Contracts ล่าสุด</div>
+      </div>
+      <div id="home-recent-list">
+        <!-- skeleton -->
+        <div class="skel-card"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div></div>
+        <div class="skel-card"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div></div>
+        <div class="skel-card"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div></div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <div class="qa-btn" onclick="navTo('contracts')">
+        <div class="qa-btn-icon">📋</div>
+        ดู Contracts ทั้งหมด
+      </div>
+      <div class="qa-btn" onclick="navTo('renewal')">
+        <div class="qa-btn-icon">🔄</div>
+        ดู Renewal Pipeline
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 2: CONTRACTS LIST
+  ══════════════════════════════════════════════ -->
+  <div id="view-contracts" class="page">
+    <!-- sticky search + filters -->
+    <div class="search-wrap">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="contracts-search" placeholder="ค้นหาชื่อเล่น…" oninput="filterContracts()">
+      </div>
+    </div>
+    <div class="filter-chips" id="contracts-chips" style="display:flex;align-items:center;gap:8px;">
+      <button class="chip active" data-filter="all"      onclick="setContractFilter('all',this)">ทั้งหมด</button>
+      <button class="chip"        data-filter="paid"     onclick="setContractFilter('paid',this)">Paid ✓</button>
+      <button class="chip"        data-filter="pending"  onclick="setContractFilter('pending',this)">Pending</button>
+      <button class="chip"        data-filter="รอยืนยัน" onclick="setContractFilter('รอยืนยัน',this)">รอยืนยัน</button>
+      <button class="chip" onclick="exportContractsCSV()" style="margin-left:auto;flex-shrink:0;" title="Export CSV">⬇️ CSV</button>
+    </div>
+    <div id="contracts-list" class="section" style="padding-top:0;">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 3: CONTRACT DETAIL
+  ══════════════════════════════════════════════ -->
+  <div id="view-detail" class="page">
+    <!-- Member info header -->
+    <div class="profile-header" id="detail-member-header">
+      <div class="profile-name" id="detail-fullname">—</div>
+      <div class="profile-nick" id="detail-nick">—</div>
+      <div class="profile-badges" id="detail-badges"></div>
+    </div>
+
+    <!-- Contract info -->
+    <div style="padding-top:12px;">
+      <div class="detail-section">
+        <div class="detail-section-header">ข้อมูล Contract</div>
+        <div class="detail-row"><div class="detail-key">ปี</div><div class="detail-val" id="d-year">—</div></div>
+        <div class="detail-row"><div class="detail-key">สถานะ</div><div class="detail-val" id="d-status">—</div></div>
+        <div class="detail-row"><div class="detail-key">วิธีชำระ</div><div class="detail-val" id="d-method">—</div></div>
+        <div class="detail-row"><div class="detail-key">วันชำระ</div><div class="detail-val" id="d-paydate">—</div></div>
+        <div class="detail-row"><div class="detail-key">ชื่อใบแจ้งหนี้</div><div class="detail-val" id="d-invname">—</div></div>
+        <div class="detail-row"><div class="detail-key">ระยะ (เดือน)</div><div class="detail-val" id="d-months">—</div></div>
+        <div class="detail-row"><div class="detail-key">WHT Status</div><div class="detail-val" id="d-wht">—</div></div>
+        <div class="detail-row"><div class="detail-key">ปิดโดย</div><div class="detail-val" id="d-closedby">—</div></div>
+        <div class="detail-row"><div class="detail-key">หมายเหตุ</div><div class="detail-val" id="d-remark">—</div></div>
+      </div>
+
+      <!-- Financial breakdown -->
+      <div class="finance-breakdown">
+        <div class="finance-breakdown-header">การเงิน</div>
+        <div class="finance-row"><div class="finance-row-key">ราคา (price)</div><div class="finance-row-val" id="d-price">—</div></div>
+        <div class="finance-row"><div class="finance-row-key">VAT / WHT</div><div class="finance-row-val" id="d-vatwht">—</div></div>
+        <div class="finance-row"><div class="finance-row-key">ค่าธรรมเนียม (fee)</div><div class="finance-row-val" id="d-fee">—</div></div>
+        <div class="finance-row total"><div class="finance-row-key">ยอดสุทธิ (net)</div><div class="finance-row-val" id="d-net">—</div></div>
+      </div>
+
+      <!-- Edit button -->
+      <div style="padding: 0 16px 16px;">
+        <button class="btn btn-primary" onclick="openEdit()">
+          ✏️ แก้ไข Contract
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 4: EDIT CONTRACT
+  ══════════════════════════════════════════════ -->
+  <div id="view-edit" class="page">
+    <div class="form-wrap">
+      <div class="form-section-title">แก้ไขข้อมูล Contract</div>
+
+      <div class="form-group">
+        <label class="form-label">สถานะ <span style="color:var(--red)">*</span></label>
+        <select class="form-control" id="edit-status" onchange="this.style.borderColor=''">
+          <option value="">— เลือก —</option>
+          <option value="paid">paid</option>
+          <option value="pending">pending</option>
+          <option value="รอยืนยัน">รอยืนยัน</option>
+          <option value="cancelled">cancelled</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">วิธีชำระเงิน</label>
+        <select class="form-control" id="edit-method">
+          <option value="">— เลือก —</option>
+          <option value="transfer">transfer</option>
+          <option value="cash">cash</option>
+          <option value="cheque">cheque</option>
+          <option value="credit card">credit card</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">วันที่ชำระ</label>
+        <input type="date" class="form-control" id="edit-paydate">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">WHT Status</label>
+        <select class="form-control" id="edit-wht">
+          <option value="">— เลือก —</option>
+          <option value="pending">pending</option>
+          <option value="received">received</option>
+          <option value="n/a">n/a</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ปิดโดย</label>
+        <input type="text" class="form-control" id="edit-closedby" placeholder="ชื่อผู้ปิด…">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">หมายเหตุ</label>
+        <textarea class="form-control" id="edit-remark" placeholder="หมายเหตุ…"></textarea>
+      </div>
+
+      <button class="btn btn-primary" id="edit-save-btn" onclick="saveEdit()">
+        <div class="spinner"></div>
+        <span class="btn-text">💾 บันทึก</span>
+      </button>
+      <div style="height:8px;"></div>
+      <button class="btn btn-secondary" onclick="cancelEdit()">ยกเลิก</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       VIEW 5: RENEWAL PIPELINE
+  ══════════════════════════════════════════════ -->
+  <div id="view-renewal" class="page">
+    <div class="filter-chips" style="padding-top:12px;" id="renewal-chips">
+      <button class="chip active" data-filter="all"         onclick="setRenewalFilter('all',this)">ทั้งหมด</button>
+      <button class="chip"        data-filter="billing"     onclick="setRenewalFilter('billing',this)">Billing 🧾</button>
+      <button class="chip"        data-filter="considering" onclick="setRenewalFilter('considering',this)">Considering</button>
+      <button class="chip"        data-filter="paid"        onclick="setRenewalFilter('paid',this)">Paid ✓</button>
+    </div>
+    <div id="renewal-list" class="section" style="padding-top:0;">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- ═══ BOTTOM NAV ═══ -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" id="nav-home" onclick="navTo('home')">
+      <div class="nav-icon">🏠</div>
+      <span>หน้าหลัก</span>
+    </div>
+    <div class="nav-item" id="nav-contracts" onclick="navTo('contracts')">
+      <div class="nav-icon">📋</div>
+      <span>Contracts</span>
+    </div>
+    <div class="nav-item" id="nav-renewal" onclick="navTo('renewal')">
+      <div class="nav-icon">🔄</div>
+      <span>Renewal</span>
+    </div>
+  </nav>
+</div><!-- /#app -->
+
+<script>
+/* ══════════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════════ */
+const SB_URL = 'https://argdnwhxwykdwrwkojyb.supabase.co';
+const SB_KEY = window.HowSupabaseKey ? window.HowSupabaseKey.get() : '';
+
+async function sb(path, opts = {}) {
+  const url = SB_URL + '/rest/v1/' + path;
+  const res = await fetch(url, {
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation',
+      ...opts.headers
+    },
+    ...opts
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+/* ══════════════════════════════════════════════════
+   DATE HELPERS
+══════════════════════════════════════════════════ */
+const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function fmtDate(s) {
+  if (!s) return '—';
+  // Parse YYYY-MM-DD as local date (avoid UTC-midnight off-by-one)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, mo, d] = s.split('-').map(Number);
+    return d + ' ' + MONTHS[mo - 1] + ' ' + y;
+  }
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+}
+function fmtMoney(n) {
+  if (n == null || n === '') return '—';
+  return '฿' + Number(n).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+}
+function todayStr() {
+  const d = new Date();
+  return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+}
+function greetingTh() {
+  const h = new Date().getHours();
+  if (h < 12) return 'สวัสดีตอนเช้า 🌅';
+  if (h < 17) return 'สวัสดีตอนบ่าย ☀️';
+  return 'สวัสดีตอนเย็น 🌙';
+}
+
+/* ══════════════════════════════════════════════════
+   PIN AUTH
+══════════════════════════════════════════════════ */
+const PIN_CORRECT = '2468';
+let pinVal = '';
+
+function pinPress(d) {
+  if (!d) return;
+  if (pinVal.length >= 4) return;
+  pinVal += d;
+  updatePinDots();
+  if (pinVal.length === 4) setTimeout(checkPin, 100);
+}
+function pinDel() {
+  pinVal = pinVal.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+}
+function updatePinDots() {
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('d' + i).classList.toggle('filled', i <= pinVal.length);
+  }
+}
+function checkPin() {
+  if (pinVal === PIN_CORRECT) {
+    document.getElementById('pin-screen').classList.add('hidden');
+    initApp();
+  } else {
+    document.getElementById('pin-error').textContent = 'PIN ไม่ถูกต้อง';
+    pinVal = '';
+    updatePinDots();
+    // shake animation
+    const box = document.querySelector('.pin-box');
+    box.style.transition = 'transform 0.05s';
+    const seq = [6, -6, 4, -4, 2, -2, 0];
+    let i = 0;
+    const iv = setInterval(() => {
+      box.style.transform = 'translateX(' + seq[i] + 'px)';
+      i++;
+      if (i >= seq.length) { clearInterval(iv); box.style.transform = ''; }
+    }, 50);
+  }
+}
+
+// PIN keyboard support
+document.addEventListener('keydown', function(e) {
+  const pinScreen = document.getElementById('pin-screen');
+  if (pinScreen.classList.contains('hidden')) return;
+  if (e.key >= '0' && e.key <= '9') {
+    pinPress(e.key);
+  } else if (e.key === 'Backspace' || e.key === 'Delete') {
+    pinDel();
+  }
+});
+
+/* ══════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════ */
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+/* ══════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════ */
+const NAV_VIEWS = ['home','contracts','renewal'];
+let currentView = 'home';
+let navHistory = [];
+
+function navTo(view) {
+  // hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  currentView = view;
+
+  // update bottom nav highlight (only for main views)
+  NAV_VIEWS.forEach(v => {
+    const el = document.getElementById('nav-' + v);
+    if (el) el.classList.toggle('active', v === view);
+  });
+
+  // update header
+  const titles = {
+    home: 'Finance',
+    contracts: 'Contracts',
+    renewal: 'Renewal Pipeline',
+    detail: 'Contract Detail',
+    edit: 'แก้ไข Contract'
+  };
+  const pageTitle = titles[view] || 'Finance';
+
+  // show/hide back button in header
+  const headerLeft = document.getElementById('header-left');
+  if (view === 'detail' || view === 'edit') {
+    headerLeft.innerHTML = `
+      <button class="back-btn" onclick="goBack()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        กลับ
+      </button>`;
+  } else {
+    headerLeft.innerHTML = `
+      <div class="header-brand">
+        <div class="header-logo">HOW</div>
+        <div>
+          <div class="header-title" id="header-title">${pageTitle}</div>
+          <div class="header-sub">HOW Bangkok</div>
+        </div>
+      </div>`;
+  }
+  // Set title in the newly created element (if it exists after innerHTML rebuild)
+  const titleEl = document.getElementById('header-title');
+  if (titleEl) titleEl.textContent = pageTitle;
+
+  // scroll to top
+  window.scrollTo(0, 0);
+}
+
+function pushNav(view) {
+  navHistory.push(currentView);
+  navTo(view);
+}
+
+function goBack() {
+  const prev = navHistory.pop() || 'contracts';
+  navTo(prev);
+}
+
+/* ══════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════ */
+let allContracts = [];
+let contractFilter = 'all';
+let contractSearch = '';
+let allRenewal = [];
+let renewalFilter = 'all';
+let currentContract = null;
+// Cache for contracts loaded from home (partial data) so detail can open them
+let homeContractCache = {};
+
+/* ══════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════ */
+function initApp() {
+  document.getElementById('home-greeting').textContent = greetingTh();
+  document.getElementById('home-date').textContent = todayStr();
+  loadHome();
+  loadContracts();
+  loadRenewal();
+}
+
+/* ══════════════════════════════════════════════════
+   VIEW 1: HOME
+══════════════════════════════════════════════════ */
+async function loadHome() {
+  try {
+    const thisYear = new Date().getFullYear();
+    const data = await sb('contracts?select=id,status,price,created_at,contract_year,members(nickname,fullname)&order=created_at.desc') || [];
+
+    const yearData = data.filter(c => {
+      const y = c.contract_year || new Date(c.created_at).getFullYear();
+      return y == thisYear;
+    });
+
+    const total   = data.length;
+    const paid    = yearData.filter(c => c.status === 'paid').length;
+    const pending = data.filter(c => c.status === 'pending').length;
+    const confirm = data.filter(c => c.status === 'รอยืนยัน').length;
+    const totalVal = yearData.reduce((sum, c) => sum + (parseFloat(c.price) || 0), 0);
+
+    document.getElementById('stat-total').textContent   = total;
+    document.getElementById('stat-paid').textContent    = paid;
+    document.getElementById('stat-pending').textContent = pending;
+    document.getElementById('stat-confirm').textContent = confirm;
+    document.getElementById('stat-value').textContent   = fmtMoney(totalVal);
+
+    // Recent 5
+    const recent = data.slice(0, 5);
+    const listEl = document.getElementById('home-recent-list');
+    if (recent.length === 0) {
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">ยังไม่มี Contracts</div></div>';
+      return;
+    }
+    // Cache home contracts so openDetail can find them even before full list loads
+    recent.forEach(c => { homeContractCache[c.id] = c; });
+    listEl.innerHTML = recent.map(c => contractCard(c)).join('');
+
+  } catch (e) {
+    toast('โหลดข้อมูลล้มเหลว: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   VIEW 2: CONTRACTS LIST
+══════════════════════════════════════════════════ */
+async function loadContracts() {
+  const listEl = document.getElementById('contracts-list');
+  listEl.innerHTML = skeletons(5);
+  try {
+    allContracts = await sb('contracts?select=*,members(nickname,fullname,phone,membership_type)&order=created_at.desc') || [];
+    renderContracts();
+  } catch (e) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">โหลดไม่ได้</div><div class="empty-sub">' + e.message + '</div></div>';
+  }
+}
+
+function skeletons(n) {
+  return Array(n).fill(0).map(() =>
+    `<div class="skel-card"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div><div class="skeleton skel-line w40"></div></div>`
+  ).join('');
+}
+
+function contractCard(c) {
+  const nick = c.members?.nickname || c.members?.fullname || '—';
+  const badgeCls = statusBadge(c.status);
+  const badgeLabel = c.status || '—';
+  return `<div class="card" onclick="openDetail(${c.id})">
+    <div class="card-row">
+      <div>
+        <div class="card-name">${escHtml(nick)}</div>
+        <div class="card-meta">
+          <span>ปี ${c.contract_year || '—'}</span>
+          <span>·</span>
+          <span>${c.payment_method || '—'}</span>
+          ${c.payment_date ? '<span>·</span><span>' + fmtDate(c.payment_date) + '</span>' : ''}
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="card-price">${c.price ? fmtMoney(c.price) : '—'}</div>
+        <div class="card-date"><span class="badge ${badgeCls}">${escHtml(badgeLabel)}</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function statusBadge(s) {
+  if (!s) return 'badge-gray';
+  const sl = s.toLowerCase();
+  if (sl === 'paid') return 'badge-green';
+  if (sl === 'pending') return 'badge-gray';
+  if (sl === 'รอยืนยัน') return 'badge-amber';
+  if (sl === 'cancelled') return 'badge-red';
+  return 'badge-gray';
+}
+
+function setContractFilter(f, btn) {
+  contractFilter = f;
+  document.querySelectorAll('#contracts-chips .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderContracts();
+}
+
+function filterContracts() {
+  contractSearch = document.getElementById('contracts-search').value.toLowerCase().trim();
+  renderContracts();
+}
+
+function renderContracts() {
+  const listEl = document.getElementById('contracts-list');
+  let filtered = allContracts;
+
+  if (contractFilter !== 'all') {
+    filtered = filtered.filter(c => (c.status || '').toLowerCase() === contractFilter.toLowerCase());
+  }
+  if (contractSearch) {
+    filtered = filtered.filter(c => {
+      const nick = (c.members?.nickname || '').toLowerCase();
+      const full = (c.members?.fullname || '').toLowerCase();
+      return nick.includes(contractSearch) || full.includes(contractSearch);
+    });
+  }
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">ไม่พบ Contracts</div><div class="empty-sub">ลองเปลี่ยน filter หรือคำค้นหา</div></div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(c => contractCard(c)).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   EXPORT CONTRACTS → CSV
+══════════════════════════════════════════════════ */
+function exportContractsCSV() {
+  if (!allContracts.length) { toast('ยังไม่มีข้อมูล', 'error'); return; }
+
+  const COLS = [
+    { h: 'Nickname',       v: c => c.members?.nickname || '' },
+    { h: 'Full Name',      v: c => c.members?.fullname  || '' },
+    { h: 'Phone',          v: c => c.members?.phone     || '' },
+    { h: 'Type',           v: c => c.members?.membership_type || '' },
+    { h: 'Contract Year',  v: c => c.contract_year || '' },
+    { h: 'Status',         v: c => c.status || '' },
+    { h: 'Payment Method', v: c => c.payment_method || '' },
+    { h: 'Payment Date',   v: c => c.payment_date || '' },
+    { h: 'Invoice Name',   v: c => c.inv_name || '' },
+    { h: 'Price',          v: c => c.price != null ? c.price : '' },
+    { h: 'VAT',            v: c => c.vat   != null ? c.vat   : '' },
+    { h: 'WHT',            v: c => c.wht   != null ? c.wht   : '' },
+    { h: 'Net',            v: c => c.net_amount != null ? c.net_amount : '' },
+    { h: 'Months',         v: c => c.months != null ? c.months : '' },
+    { h: 'WHT Status',     v: c => c.wht_status  || '' },
+    { h: 'Closed By',      v: c => c.closed_by   || '' },
+    { h: 'Remark',         v: c => c.remark       || '' },
+  ];
+
+  function csvCell(val) {
+    const s = String(val ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  // Apply current filter so export matches what's visible
+  let rows = allContracts;
+  if (contractFilter !== 'all') rows = rows.filter(c => (c.status||'').toLowerCase() === contractFilter.toLowerCase());
+  if (contractSearch)           rows = rows.filter(c => {
+    const nick = (c.members?.nickname||'').toLowerCase();
+    const full = (c.members?.fullname||'').toLowerCase();
+    return nick.includes(contractSearch) || full.includes(contractSearch);
+  });
+
+  const header = COLS.map(col => csvCell(col.h)).join(',');
+  const body   = rows.map(c => COLS.map(col => csvCell(col.v(c))).join(',')).join('\n');
+  const csv    = '﻿' + header + '\n' + body; // BOM for Excel Thai encoding
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `HOW_Contracts_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Export แล้ว ${rows.length} รายการ ✓`, 'success');
+}
+
+/* ══════════════════════════════════════════════════
+   VIEW 3: DETAIL
+══════════════════════════════════════════════════ */
+function openDetail(id) {
+  // Find from allContracts first, fall back to homeContractCache
+  let c = allContracts.find(x => x.id == id) || homeContractCache[id];
+  if (!c) {
+    toast('ไม่พบข้อมูล Contract', 'error');
+    return;
+  }
+  currentContract = c;
+  populateDetail(c);
+  pushNav('detail');
+}
+
+function populateDetail(c) {
+  const m = c.members || {};
+  document.getElementById('detail-fullname').textContent = m.fullname || '—';
+  const nickParts = [];
+  if (m.nickname) nickParts.push('@' + m.nickname);
+  if (m.phone)    nickParts.push(m.phone);
+  document.getElementById('detail-nick').textContent = nickParts.join('  ·  ') || '—';
+
+  // Badges
+  const badgesEl = document.getElementById('detail-badges');
+  let badges = '';
+  if (m.membership_type) badges += `<span class="badge badge-gold">${escHtml(m.membership_type)}</span>`;
+  if (c.status)           badges += `<span class="badge ${statusBadge(c.status)}">${escHtml(c.status)}</span>`;
+  badgesEl.innerHTML = badges;
+
+  // Contract fields
+  setText('d-year',     c.contract_year || '—');
+  setHtml('d-status',   `<span class="badge ${statusBadge(c.status)}">${escHtml(c.status || '—')}</span>`);
+  setText('d-method',   c.payment_method || '—');
+  setText('d-paydate',  fmtDate(c.payment_date));
+  setText('d-invname',  c.inv_name || '—');
+  setText('d-months',   c.months != null ? c.months + ' เดือน' : '—');
+  setText('d-wht',      c.wht_status || '—');
+  setText('d-closedby', c.closed_by || '—');
+  setText('d-remark',   c.remark || '—');
+
+  // Financials
+  setText('d-price',  fmtMoney(c.price));
+  setText('d-vatwht', fmtMoney(c.vat_wht));
+  setText('d-fee',    fmtMoney(c.fee));
+  setText('d-net',    fmtMoney(c.net_amount));
+}
+
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function setHtml(id, val) { const el = document.getElementById(id); if (el) el.innerHTML = val; }
+
+/* ══════════════════════════════════════════════════
+   VIEW 4: EDIT
+══════════════════════════════════════════════════ */
+function openEdit() {
+  if (!currentContract) return;
+  const c = currentContract;
+  setFormVal('edit-status',   c.status || '');
+  setFormVal('edit-method',   c.payment_method || '');
+  setFormVal('edit-paydate',  c.payment_date ? c.payment_date.split('T')[0] : '');
+  setFormVal('edit-wht',      c.wht_status || '');
+  setFormVal('edit-closedby', c.closed_by || '');
+  setFormVal('edit-remark',   c.remark || '');
+  pushNav('edit');
+}
+
+function setFormVal(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+
+function cancelEdit() {
+  goBack();
+}
+
+async function saveEdit() {
+  if (!currentContract) return;
+
+  // Form validation
+  const statusEl  = document.getElementById('edit-status');
+  const statusVal = statusEl.value.trim();
+  if (!statusVal) {
+    statusEl.style.borderColor = 'var(--red)';
+    statusEl.focus();
+    toast('กรุณาเลือกสถานะ', 'error');
+    return;
+  }
+  statusEl.style.borderColor = '';
+
+  const btn = document.getElementById('edit-save-btn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const payload = {
+    status:         document.getElementById('edit-status').value || null,
+    payment_method: document.getElementById('edit-method').value || null,
+    payment_date:   document.getElementById('edit-paydate').value || null,
+    wht_status:     document.getElementById('edit-wht').value || null,
+    closed_by:      document.getElementById('edit-closedby').value || null,
+    remark:         document.getElementById('edit-remark').value || null,
+  };
+
+  try {
+    await sb('contracts?id=eq.' + currentContract.id, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      prefer: 'return=representation'
+    });
+
+    // Update local state
+    Object.assign(currentContract, payload);
+    const idx = allContracts.findIndex(x => x.id === currentContract.id);
+    if (idx >= 0) Object.assign(allContracts[idx], payload);
+
+    toast('บันทึกสำเร็จ ✓', 'success');
+    populateDetail(currentContract);
+    renderContracts();
+    loadHome(); // refresh home stats
+
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    goBack(); // back to detail
+  } catch (e) {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    toast('บันทึกล้มเหลว: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   VIEW 5: RENEWAL PIPELINE
+══════════════════════════════════════════════════ */
+async function loadRenewal() {
+  const listEl = document.getElementById('renewal-list');
+  listEl.innerHTML = skeletons(5);
+  try {
+    allRenewal = await sb("renewal_tracking?select=*,members(nickname,fullname)&status=in.(billing,considering,paid)&order=expiry_month.asc") || [];
+    renderRenewal();
+  } catch (e) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">โหลดไม่ได้</div><div class="empty-sub">' + e.message + '</div></div>';
+  }
+}
+
+function setRenewalFilter(f, btn) {
+  renewalFilter = f;
+  document.querySelectorAll('#renewal-chips .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderRenewal();
+}
+
+function renewalStatusBadge(s) {
+  if (!s) return 'badge-gray';
+  const sl = s.toLowerCase();
+  if (sl === 'paid')        return 'badge-green';
+  if (sl === 'billing')     return 'badge-amber';
+  if (sl === 'considering') return 'badge-gray';
+  return 'badge-gray';
+}
+
+function likelihoodStars(l) {
+  if (!l) return '—';
+  const n = parseInt(l);
+  if (isNaN(n)) return escHtml(String(l));
+  const filled = Math.min(n, 5);
+  return '★'.repeat(filled) + '☆'.repeat(Math.max(0, 5 - filled));
+}
+
+function renderRenewal() {
+  const listEl = document.getElementById('renewal-list');
+  let filtered = allRenewal;
+  if (renewalFilter !== 'all') {
+    filtered = filtered.filter(r => (r.status || '').toLowerCase() === renewalFilter.toLowerCase());
+  }
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">ไม่พบข้อมูล</div><div class="empty-sub">ลองเปลี่ยน filter</div></div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(r => {
+    const isHot = r.is_hot;
+    return `<div class="card" style="${isHot ? 'border-color:var(--red);' : ''}">
+      <div class="card-row">
+        <div>
+          <div class="card-name">${escHtml(r.member_nickname || '—')}${isHot ? ' 🔥' : ''}</div>
+          <div class="card-meta">
+            ${r.expiry_month ? '<span>หมด: ' + escHtml(r.expiry_month) + '</span><span>·</span>' : ''}
+            <span>Likelihood: <span style="color:var(--accent)">${likelihoodStars(r.likelihood)}</span></span>
+          </div>
+          ${r.remark ? '<div style="font-size:11px;color:var(--text2);margin-top:4px;">' + escHtml(r.remark) + '</div>' : ''}
+        </div>
+        <div class="card-right">
+          <span class="badge ${renewalStatusBadge(r.status)}">${escHtml(r.status || '—')}</span>
+          ${r.hot_price ? '<div class="card-price" style="margin-top:4px;">' + fmtMoney(r.hot_price) + '</div>' : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════════ */
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HOW Operations — Staff App</title>
+  <script src="supabase_key.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════ */
+    :root {
+      --bg:        #1a1a1a;
+      --surface:   #242424;
+      --surface2:  #2e2e2e;
+      --surface3:  #333;
+      --border:    #3a3a3a;
+      --text:      #e8e8e8;
+      --text2:     #a0a0a0;
+      --text3:     #555;
+      --accent:    #c9a84c;
+      --accent-dim:#a07830;
+      --accent-bg: rgba(201,168,76,0.12);
+      --green:     #22c55e;
+      --green-bg:  #052e16;
+      --red:       #ef4444;
+      --red-bg:    #3a1010;
+      --amber:     #f59e0b;
+      --font:      'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius:    12px;
+      --radius-sm: 8px;
+      --nav-h:     64px;
+      --header-h:  56px;
+
+      /* class type colors */
+      --yoga:        #a855f7;
+      --yoga-bg:     rgba(168,85,247,0.15);
+      --meditation:  #3b82f6;
+      --meditation-bg: rgba(59,130,246,0.15);
+      --workshop:    #f59e0b;
+      --workshop-bg: rgba(245,158,11,0.15);
+      --fitness:     #22c55e;
+      --fitness-bg:  rgba(34,197,94,0.15);
+      --other:       #6b7280;
+      --other-bg:    rgba(107,114,128,0.15);
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100%;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    button { font-family: var(--font); cursor: pointer; border: none; background: none; color: inherit; }
+    input, select, textarea { font-family: var(--font); }
+    a { color: inherit; text-decoration: none; }
+
+    /* ═══════════════════════════════════════════
+       APP SHELL
+    ═══════════════════════════════════════════ */
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+      background: var(--bg);
+    }
+
+    /* ═══════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════ */
+    .app-header {
+      position: fixed;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+    }
+    .app-header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .header-badge {
+      font-size: 11px;
+      color: var(--text3);
+      font-weight: 500;
+    }
+    .btn-back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--accent);
+      font-weight: 600;
+      padding: 6px 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       CONTENT AREA
+    ═══════════════════════════════════════════ */
+    .view-content {
+      padding-top: calc(var(--header-h) + 12px);
+      padding-bottom: calc(var(--nav-h) + 16px);
+      min-height: 100vh;
+    }
+
+    /* ═══════════════════════════════════════════
+       BOTTOM NAV
+    ═══════════════════════════════════════════ */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      height: var(--nav-h);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text3);
+      transition: color 0.15s;
+      padding: 0 4px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-item.active { color: var(--accent); }
+
+    /* ═══════════════════════════════════════════
+       SECTIONS / VIEWS
+    ═══════════════════════════════════════════ */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ═══════════════════════════════════════════
+       CARDS / STATS
+    ═══════════════════════════════════════════ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 16px 16px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text2);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    /* ═══════════════════════════════════════════
+       SECTION TITLES
+    ═══════════════════════════════════════════ */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 16px 10px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .section-action {
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ═══════════════════════════════════════════
+       LIST ITEMS
+    ═══════════════════════════════════════════ */
+    .list-container {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .list-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+    .list-item:active { background: var(--surface2); }
+    .list-item-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .list-item-body { flex: 1; min-width: 0; }
+    .list-item-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .list-item-sub {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+    .list-item-right {
+      font-size: 12px;
+      color: var(--text2);
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .list-item-right strong {
+      display: block;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .chevron {
+      color: var(--text3);
+      font-size: 16px;
+      margin-left: 4px;
+    }
+
+    /* ═══════════════════════════════════════════
+       BUTTONS
+    ═══════════════════════════════════════════ */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 20px;
+      transition: opacity 0.15s, transform 0.1s;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.97); opacity: 0.9; }
+    .btn-accent { background: var(--accent); color: #1a1a1a; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-ghost { background: var(--surface2); color: var(--text); }
+    .btn-full { width: 100%; }
+    .btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+
+    /* Action buttons in home */
+    .home-actions {
+      padding: 8px 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ═══════════════════════════════════════════
+       FAB
+    ═══════════════════════════════════════════ */
+    .fab {
+      position: fixed;
+      bottom: calc(var(--nav-h) + 16px);
+      right: calc(50% - 228px);
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #1a1a1a;
+      font-size: 24px;
+      font-weight: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      z-index: 99;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .fab:active { transform: scale(0.92); }
+    @media (max-width: 480px) {
+      .fab { right: 16px; }
+    }
+
+    /* ═══════════════════════════════════════════
+       TYPE BADGE
+    ═══════════════════════════════════════════ */
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .type-yoga { background: var(--yoga-bg); color: var(--yoga); }
+    .type-meditation { background: var(--meditation-bg); color: var(--meditation); }
+    .type-workshop { background: var(--workshop-bg); color: var(--workshop); }
+    .type-fitness { background: var(--fitness-bg); color: var(--fitness); }
+    .type-other { background: var(--other-bg); color: var(--other); }
+
+    .type-icon-yoga { background: var(--yoga-bg); }
+    .type-icon-meditation { background: var(--meditation-bg); }
+    .type-icon-workshop { background: var(--workshop-bg); }
+    .type-icon-fitness { background: var(--fitness-bg); }
+    .type-icon-other { background: var(--other-bg); }
+
+    /* ═══════════════════════════════════════════
+       TOGGLE
+    ═══════════════════════════════════════════ */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface3);
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      top: 3px; left: 3px;
+      background: var(--text2);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: rgba(34,197,94,0.25); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(20px); background: var(--green); }
+    .toggle-label { font-size: 13px; color: var(--text2); }
+
+    /* ═══════════════════════════════════════════
+       FORM ELEMENTS
+    ═══════════════════════════════════════════ */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-input {
+      width: 100%;
+      max-width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--text3); }
+    select.form-input { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    textarea.form-input { resize: vertical; min-height: 80px; }
+
+    /* ═══════════════════════════════════════════
+       MODAL / SLIDE-IN
+    ═══════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: 0 0 env(safe-area-inset-bottom, 0);
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 0;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .modal-close {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--text2);
+      cursor: pointer;
+    }
+    .modal-body {
+      padding: 20px;
+    }
+    .modal-footer {
+      padding: 12px 20px 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .modal-footer .btn { flex: 1; }
+
+    /* ═══════════════════════════════════════════
+       PIN SCREEN
+    ═══════════════════════════════════════════ */
+    #pin-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+    .pin-logo {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .pin-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .pin-sub {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 36px;
+    }
+    .pin-dots {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .pin-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+    .pin-dot.error { background: var(--red); border-color: var(--red); }
+    .pin-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 72px);
+      gap: 12px;
+    }
+    .pin-key {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s, transform 0.1s;
+      user-select: none;
+    }
+    .pin-key:active { background: var(--surface3); transform: scale(0.93); }
+    .pin-key.empty { background: transparent; border: none; pointer-events: none; }
+    .pin-key.del { font-size: 18px; }
+    .pin-error-msg {
+      font-size: 13px;
+      color: var(--red);
+      margin-top: 16px;
+      min-height: 20px;
+      text-align: center;
+    }
+
+    /* ═══════════════════════════════════════════
+       EMPTY STATE
+    ═══════════════════════════════════════════ */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .empty-icon { font-size: 48px; opacity: 0.4; }
+    .empty-title { font-size: 16px; font-weight: 700; color: var(--text2); }
+    .empty-sub { font-size: 13px; color: var(--text3); max-width: 240px; line-height: 1.6; }
+
+    /* ═══════════════════════════════════════════
+       PILL / STATUS
+    ═══════════════════════════════════════════ */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+    .pill-green { background: var(--green-bg); color: var(--green); }
+    .pill-red { background: var(--red-bg); color: var(--red); }
+    .pill-amber { background: rgba(245,158,11,0.15); color: var(--amber); }
+
+    /* ═══════════════════════════════════════════
+       ATTENDANCE
+    ═══════════════════════════════════════════ */
+    .attendance-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      margin-bottom: 0;
+    }
+    .attendance-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .count-bar {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .count-bar-label { font-size: 13px; color: var(--text2); }
+    .count-bar-value { font-size: 24px; font-weight: 800; color: var(--accent); }
+    .count-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .count-adj {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--surface3);
+      font-size: 20px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .count-adj:active { background: var(--accent); color: #1a1a1a; }
+    .count-display {
+      min-width: 60px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    /* Search members */
+    .search-box {
+      position: relative;
+      padding: 0 16px 10px;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 24px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 14px 10px 38px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text3); }
+    .search-icon {
+      position: absolute;
+      left: 28px;
+      top: 50%;
+      transform: translateY(-60%);
+      font-size: 16px;
+      color: var(--text3);
+      pointer-events: none;
+    }
+
+    /* member row */
+    .member-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 16px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+    .member-row:active { background: var(--surface2); }
+    .member-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--surface3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text2);
+      flex-shrink: 0;
+    }
+    .member-avatar.active-member { background: rgba(34,197,94,0.15); color: var(--green); }
+    .member-name { font-size: 14px; font-weight: 600; }
+    .member-full { font-size: 12px; color: var(--text2); }
+    .member-check { color: var(--green); font-size: 18px; margin-left: auto; }
+
+    /* ═══════════════════════════════════════════
+       HISTORY FILTER
+    ═══════════════════════════════════════════ */
+    .filter-bar {
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      color: var(--text2);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+    }
+    .filter-chip.active {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ═══════════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 12px 16px;
+    }
+
+    /* ═══════════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════════ */
+    .toast-container {
+      position: fixed;
+      top: calc(var(--header-h) + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: calc(100% - 32px);
+      max-width: 440px;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: toastIn 0.2s ease-out;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .toast-success { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+    .toast-error { border-color: var(--red); background: var(--red-bg); color: var(--red); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ═══════════════════════════════════════════
+       LOADING
+    ═══════════════════════════════════════════ */
+    .loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: var(--text3);
+      font-size: 13px;
+      gap: 8px;
+    }
+    .spin {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══════════════════════════════════════════
+       MISC
+    ═══════════════════════════════════════════ */
+    .spacer-sm { height: 8px; }
+    .spacer { height: 16px; }
+    .px-16 { padding: 0 16px; }
+    .mb-0 { margin-bottom: 0; }
+
+    .class-item-active { border-left: 3px solid var(--green); }
+    .class-item-inactive { border-left: 3px solid var(--text3); opacity: 0.65; }
+
+    /* Mobile overflow guard */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .list-container { overflow-x: hidden; }
+
+    .session-time-badge {
+      background: var(--accent-bg);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- PIN SCREEN -->
+<div id="pin-screen">
+  <div class="pin-logo">🏃</div>
+  <div class="pin-title">HOW Operations</div>
+  <div class="pin-sub">กรอก PIN เพื่อเข้าใช้งาน</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="dot-0"></div>
+    <div class="pin-dot" id="dot-1"></div>
+    <div class="pin-dot" id="dot-2"></div>
+    <div class="pin-dot" id="dot-3"></div>
+  </div>
+  <div class="pin-keypad">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <button class="pin-key empty"></button>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="pin-error-msg" id="pin-error"></div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+
+  <!-- HEADER -->
+  <header class="app-header" id="app-header">
+    <h1 id="header-title">HOW Operations</h1>
+    <span class="header-badge" id="header-badge"></span>
+  </header>
+
+  <!-- ══════════════════════════════════════
+       VIEW 1: HOME
+  ══════════════════════════════════════ -->
+  <div class="view active" id="view-home">
+    <div class="view-content">
+      <div class="spacer-sm"></div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Classes ทั้งหมด</span>
+          <span class="stat-value" id="home-classes-count">—</span>
+          <span class="stat-sub">active classes</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Sessions วันนี้</span>
+          <span class="stat-value" id="home-sessions-count">—</span>
+          <span class="stat-sub" id="home-today-label">วันนี้</span>
+        </div>
+      </div>
+
+      <div class="home-actions">
+        <button class="btn btn-accent btn-full" onclick="goToAddSession()">
+          ➕ เพิ่ม Session วันนี้
+        </button>
+        <button class="btn btn-outline btn-full" onclick="switchView('classes')">
+          📚 จัดการ Classes
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-header">
+        <span class="section-title">Sessions วันนี้</span>
+      </div>
+
+      <div id="home-sessions-list">
+        <div class="loader"><div class="spin"></div> กำลังโหลด...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       VIEW 2: CLASS MANAGEMENT
+  ══════════════════════════════════════ -->
+  <div class="view" id="view-classes">
+    <div class="view-content">
+      <div id="classes-list">
+        <div class="loader"><div class="spin"></div> กำลังโหลด...</div>
+      </div>
+    </div>
+    <!-- FAB -->
+    <button class="fab" id="fab-add-class" onclick="openClassModal(null)">＋</button>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       VIEW 3: ADD SESSION
+  ══════════════════════════════════════ -->
+  <div class="view" id="view-add-session">
+    <div class="view-content">
+      <div class="modal-body" style="padding-top: 8px;">
+        <div class="form-group">
+          <label class="form-label">เลือก Class *</label>
+          <select class="form-input" id="session-class-id">
+            <option value="">— เลือก Class —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">วันที่ *</label>
+          <input type="date" class="form-input" id="session-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">เวลาเริ่ม *</label>
+          <input type="time" class="form-input" id="session-start-time">
+        </div>
+        <div class="form-group">
+          <label class="form-label">หมายเหตุ</label>
+          <textarea class="form-input" id="session-notes" placeholder="เพิ่มหมายเหตุ..."></textarea>
+        </div>
+        <button class="btn btn-accent btn-full" onclick="saveSession()" id="btn-save-session">
+          บันทึก Session
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       VIEW 4: SESSION DETAIL & ATTENDANCE
+  ══════════════════════════════════════ -->
+  <div class="view" id="view-session-detail">
+    <div class="view-content" style="padding-top: var(--header-h);">
+
+      <!-- Session info bar -->
+      <div class="attendance-header" id="session-info-bar">
+        <!-- injected -->
+      </div>
+
+      <!-- Count bar -->
+      <div class="count-bar">
+        <div>
+          <div class="count-bar-label">จำนวนผู้เข้าร่วม</div>
+          <div style="font-size:11px; color: var(--text3); margin-top:2px;" id="session-capacity-label"></div>
+        </div>
+        <div class="count-input-wrap">
+          <button class="count-adj" onclick="adjustCount(-1)">−</button>
+          <div class="count-display" id="count-display">0</div>
+          <button class="count-adj" onclick="adjustCount(1)">＋</button>
+        </div>
+      </div>
+
+      <div class="divider" style="margin: 4px 16px;"></div>
+
+      <!-- Search & add member -->
+      <div class="section-header">
+        <span class="section-title">เพิ่มสมาชิก</span>
+      </div>
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="member-search" placeholder="ค้นหาชื่อ nickname..." oninput="onMemberSearch(this.value)">
+      </div>
+      <div id="member-search-results"></div>
+
+      <div class="divider"></div>
+
+      <!-- Attendance list -->
+      <div class="section-header">
+        <span class="section-title">ผู้เข้าร่วมที่บันทึกแล้ว</span>
+        <span class="section-action" id="attendance-count-label"></span>
+      </div>
+      <div id="attendance-list">
+        <div class="loader"><div class="spin"></div> กำลังโหลด...</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       VIEW 5: HISTORY
+  ══════════════════════════════════════ -->
+  <div class="view" id="view-history">
+    <div class="view-content">
+      <div class="filter-bar" id="history-filter-bar">
+        <button class="filter-chip active" data-class-id="" onclick="setHistoryFilter('', this)">ทั้งหมด</button>
+      </div>
+      <div id="history-list">
+        <div class="loader"><div class="spin"></div> กำลังโหลด...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       BOTTOM NAV
+  ══════════════════════════════════════ -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-home" onclick="switchView('home')">
+      <span class="nav-icon">🏠</span>
+      <span>หน้าหลัก</span>
+    </button>
+    <button class="nav-item" id="nav-classes" onclick="switchView('classes')">
+      <span class="nav-icon">📚</span>
+      <span>Classes</span>
+    </button>
+    <button class="nav-item" id="nav-add-session" onclick="goToAddSession()">
+      <span class="nav-icon">📅</span>
+      <span>Sessions</span>
+    </button>
+    <button class="nav-item" id="nav-history" onclick="switchView('history')">
+      <span class="nav-icon">📊</span>
+      <span>ประวัติ</span>
+    </button>
+  </nav>
+
+</div><!-- #app -->
+
+<!-- ══════════════════════════════════════
+     MODAL: ADD / EDIT CLASS
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="class-modal" onclick="closeClassModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="class-modal-title">เพิ่ม Class ใหม่</span>
+      <button class="modal-close" onclick="closeClassModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="class-edit-id">
+      <div class="form-group">
+        <label class="form-label">ชื่อ Class *</label>
+        <input type="text" class="form-input" id="class-name" placeholder="เช่น Morning Yoga">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ประเภท *</label>
+        <select class="form-input" id="class-type">
+          <option value="">— เลือกประเภท —</option>
+          <option value="yoga">Yoga</option>
+          <option value="meditation">Meditation</option>
+          <option value="workshop">Workshop</option>
+          <option value="fitness">Fitness</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ผู้สอน</label>
+        <input type="text" class="form-input" id="class-instructor" placeholder="ชื่อผู้สอน">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group mb-0">
+          <label class="form-label">ความจุ (คน)</label>
+          <input type="number" class="form-input" id="class-capacity" placeholder="20" min="1">
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label">ระยะเวลา (นาที)</label>
+          <input type="number" class="form-input" id="class-duration" placeholder="60" min="1">
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="toggle-wrap">
+        <label class="toggle">
+          <input type="checkbox" id="class-is-active" checked>
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">เปิดใช้งาน (Active)</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeClassModal()">ยกเลิก</button>
+      <button class="btn btn-accent" onclick="saveClass()" id="btn-save-class">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   CONFIG & CONSTANTS
+══════════════════════════════════════════════════════════ */
+const SB_URL = 'https://argdnwhxwykdwrwkojyb.supabase.co';
+const SB_KEY = window.HowSupabaseKey ? window.HowSupabaseKey.get() : '';
+const PIN = '2468';
+
+const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function fmtDate(s){if(!s)return'—';const d=new Date(s+'T00:00:00');return d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear();}
+function fmtTime(t){if(!t)return'—';return t.slice(0,5);}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+
+const TYPE_LABELS = { yoga:'Yoga', meditation:'Meditation', workshop:'Workshop', fitness:'Fitness', other:'Other' };
+const TYPE_ICONS  = { yoga:'🧘', meditation:'🪬', workshop:'📐', fitness:'💪', other:'⭐' };
+
+/* ══════════════════════════════════════════════════════════
+   PIN AUTH
+══════════════════════════════════════════════════════════ */
+let pinInput = '';
+
+function pinKey(k) {
+  if (pinInput.length >= 4) return;
+  pinInput += k;
+  updatePinDots();
+  if (pinInput.length === 4) {
+    setTimeout(checkPin, 100);
+  }
+}
+function pinDel() {
+  if (!pinInput.length) return;
+  pinInput = pinInput.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+}
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('dot-' + i);
+    dot.classList.toggle('filled', i < pinInput.length);
+    dot.classList.remove('error');
+  }
+}
+function checkPin() {
+  if (pinInput === PIN) {
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+  } else {
+    for (let i = 0; i < 4; i++) document.getElementById('dot-' + i).classList.add('error');
+    document.getElementById('pin-error').textContent = 'PIN ไม่ถูกต้อง ลองใหม่อีกครั้ง';
+    setTimeout(() => {
+      pinInput = '';
+      updatePinDots();
+    }, 800);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SUPABASE FETCH HELPER
+══════════════════════════════════════════════════════════ */
+async function sbGet(path) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function sbPost(table, body) {
+  const res = await fetch(SB_URL + '/rest/v1/' + table, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function sbPatch(table, filter, body) {
+  const res = await fetch(SB_URL + '/rest/v1/' + table + '?' + filter, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/* ══════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════ */
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + type;
+  t.innerHTML = (type === 'success' ? '✅ ' : '❌ ') + msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+/* ══════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════ */
+let allClasses = [];
+let currentSessionId = null;
+let currentSessionData = null;
+let currentActualCount = 0;
+let attendedMemberIds = new Set();
+let historyFilterClassId = '';
+let memberSearchTimeout = null;
+let saveCountTimeout = null;
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+function initApp() {
+  document.getElementById('home-today-label').textContent = fmtDate(todayStr());
+  loadHome();
+  loadClasses();
+  loadHistory();
+  populateSessionClassDropdown();
+  document.getElementById('session-date').value = todayStr();
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEW SWITCHING
+══════════════════════════════════════════════════════════ */
+const VIEWS = ['home', 'classes', 'add-session', 'session-detail', 'history'];
+const NAV_MAP = { home: 'nav-home', classes: 'nav-classes', 'add-session': 'nav-add-session', history: 'nav-history' };
+const HEADER_TITLES = {
+  home: 'HOW Operations',
+  classes: 'จัดการ Classes',
+  'add-session': 'เพิ่ม Session',
+  'session-detail': 'รายละเอียด Session',
+  history: 'ประวัติ Sessions'
+};
+
+function switchView(name) {
+  // Cancel any pending attendance count PATCH to avoid firing against stale session
+  if (saveCountTimeout) {
+    clearTimeout(saveCountTimeout);
+    saveCountTimeout = null;
+  }
+
+  VIEWS.forEach(v => {
+    document.getElementById('view-' + v).classList.toggle('active', v === name);
+  });
+  // Update nav
+  Object.keys(NAV_MAP).forEach(v => {
+    document.getElementById(NAV_MAP[v])?.classList.toggle('active', v === name);
+  });
+  // Update header
+  document.getElementById('header-title').textContent = HEADER_TITLES[name] || 'HOW Operations';
+  // FAB visibility
+  const fab = document.getElementById('fab-add-class');
+  if (fab) fab.style.display = name === 'classes' ? 'flex' : 'none';
+  // Reset header badge
+  document.getElementById('header-badge').textContent = '';
+
+  if (name === 'home') loadHome();
+  if (name === 'history') loadHistory();
+}
+
+function goToAddSession(prefillClassId) {
+  switchView('add-session');
+  // Always default the date field to today when opening this view
+  document.getElementById('session-date').value = todayStr();
+  if (prefillClassId) document.getElementById('session-class-id').value = prefillClassId;
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEW 1: HOME
+══════════════════════════════════════════════════════════ */
+async function loadHome() {
+  document.getElementById('home-sessions-list').innerHTML = '<div class="loader"><div class="spin"></div> กำลังโหลด...</div>';
+  try {
+    const [activeClasses, todaySessions] = await Promise.all([
+      sbGet('classes?is_active=eq.true&select=id'),
+      sbGet('class_sessions?session_date=eq.' + todayStr() + '&select=*,classes(name,instructor,capacity,class_type)&order=start_time')
+    ]);
+    document.getElementById('home-classes-count').textContent = activeClasses.length;
+    document.getElementById('home-sessions-count').textContent = todaySessions.length;
+    renderHomeSessions(todaySessions);
+  } catch(e) {
+    showToast('โหลดหน้าหลักไม่สำเร็จ: ' + e.message, 'error');
+    document.getElementById('home-sessions-list').innerHTML = '<div class="loader" style="color:var(--red)">เกิดข้อผิดพลาด</div>';
+  }
+}
+
+function renderHomeSessions(sessions) {
+  const el = document.getElementById('home-sessions-list');
+  if (!sessions.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📅</div>
+      <div class="empty-title">ยังไม่มี Session วันนี้</div>
+      <div class="empty-sub">กดปุ่ม "เพิ่ม Session วันนี้" เพื่อเริ่มต้น</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = '<div class="list-container">' + sessions.map(s => {
+    const cls = s.classes || {};
+    const typeKey = (cls.class_type || 'other').toLowerCase();
+    return `<div class="list-item" onclick="openSessionDetail(${s.id})">
+      <div class="list-item-icon type-icon-${typeKey}">${TYPE_ICONS[typeKey] || '⭐'}</div>
+      <div class="list-item-body">
+        <div class="list-item-title">${cls.name || '—'}</div>
+        <div class="list-item-sub">${cls.instructor ? '👤 ' + cls.instructor : ''}</div>
+      </div>
+      <div class="list-item-right">
+        <span class="session-time-badge">${fmtTime(s.start_time)}</span>
+        <span style="display:block; font-size:12px; color:var(--text2); margin-top:4px;">${s.actual_count || 0} / ${cls.capacity || '—'} คน</span>
+      </div>
+      <span class="chevron">›</span>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEW 2: CLASS MANAGEMENT
+══════════════════════════════════════════════════════════ */
+async function loadClasses() {
+  const el = document.getElementById('classes-list');
+  el.innerHTML = '<div class="loader"><div class="spin"></div> กำลังโหลด...</div>';
+  try {
+    allClasses = await sbGet('classes?order=name&select=*');
+    renderClassList();
+  } catch(e) {
+    showToast('โหลด Classes ไม่สำเร็จ: ' + e.message, 'error');
+    el.innerHTML = '<div class="loader" style="color:var(--red)">เกิดข้อผิดพลาด</div>';
+  }
+}
+
+function renderClassList() {
+  const el = document.getElementById('classes-list');
+  if (!allClasses.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📚</div>
+      <div class="empty-title">ยังไม่มี Class</div>
+      <div class="empty-sub">กดปุ่ม ＋ ด้านล่างขวาเพื่อเพิ่ม Class แรก!</div>
+      <button class="btn btn-accent" onclick="openClassModal(null)" style="margin-top:8px;">➕ เพิ่ม Class ใหม่</button>
+    </div>`;
+    return;
+  }
+  const active = allClasses.filter(c => c.is_active);
+  const inactive = allClasses.filter(c => !c.is_active);
+  let html = '<div class="list-container">';
+  if (active.length) {
+    active.forEach(c => { html += classItemHtml(c); });
+  }
+  if (inactive.length) {
+    html += `</div><div class="divider"></div><div class="section-header"><span class="section-title" style="opacity:0.5">ปิดใช้งาน</span></div><div class="list-container">`;
+    inactive.forEach(c => { html += classItemHtml(c); });
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function classItemHtml(c) {
+  const typeKey = (c.class_type || 'other').toLowerCase();
+  return `<div class="list-item ${c.is_active ? 'class-item-active' : 'class-item-inactive'}" onclick="openClassModal(${c.id})">
+    <div class="list-item-icon type-icon-${typeKey}">${TYPE_ICONS[typeKey] || '⭐'}</div>
+    <div class="list-item-body">
+      <div class="list-item-title">${c.name}</div>
+      <div class="list-item-sub" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:3px;">
+        <span class="type-badge type-${typeKey}">${TYPE_LABELS[typeKey] || typeKey}</span>
+        ${c.instructor ? '<span style="color:var(--text3)">👤 '+c.instructor+'</span>' : ''}
+        ${c.capacity ? '<span style="color:var(--text3)">👥 '+c.capacity+' คน</span>' : ''}
+      </div>
+    </div>
+    <span class="chevron">›</span>
+  </div>`;
+}
+
+/* — Class Modal — */
+function openClassModal(classId) {
+  const modal = document.getElementById('class-modal');
+  const editId = document.getElementById('class-edit-id');
+  if (classId === null) {
+    // New
+    document.getElementById('class-modal-title').textContent = 'เพิ่ม Class ใหม่';
+    editId.value = '';
+    document.getElementById('class-name').value = '';
+    document.getElementById('class-type').value = '';
+    document.getElementById('class-instructor').value = '';
+    document.getElementById('class-capacity').value = '';
+    document.getElementById('class-duration').value = '';
+    document.getElementById('class-is-active').checked = true;
+  } else {
+    const cls = allClasses.find(c => c.id === classId);
+    if (!cls) return;
+    document.getElementById('class-modal-title').textContent = 'แก้ไข Class';
+    editId.value = cls.id;
+    document.getElementById('class-name').value = cls.name || '';
+    document.getElementById('class-type').value = cls.class_type || '';
+    document.getElementById('class-instructor').value = cls.instructor || '';
+    document.getElementById('class-capacity').value = cls.capacity || '';
+    document.getElementById('class-duration').value = cls.duration_min || '';
+    document.getElementById('class-is-active').checked = !!cls.is_active;
+  }
+  modal.classList.add('open');
+}
+function closeClassModal(e) {
+  if (e && e.target !== document.getElementById('class-modal')) return;
+  document.getElementById('class-modal').classList.remove('open');
+}
+
+async function saveClass() {
+  const name = document.getElementById('class-name').value.trim();
+  const type = document.getElementById('class-type').value;
+  if (!name) { showToast('กรุณากรอกชื่อ Class', 'error'); return; }
+  if (!type) { showToast('กรุณาเลือกประเภท', 'error'); return; }
+
+  const body = {
+    name,
+    class_type: type,
+    instructor: document.getElementById('class-instructor').value.trim() || null,
+    capacity: parseInt(document.getElementById('class-capacity').value) || null,
+    duration_min: parseInt(document.getElementById('class-duration').value) || null,
+    is_active: document.getElementById('class-is-active').checked
+  };
+
+  const editId = document.getElementById('class-edit-id').value;
+  const btn = document.getElementById('btn-save-class');
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+
+  try {
+    if (editId) {
+      await sbPatch('classes', 'id=eq.' + editId, body);
+      showToast('แก้ไข Class เรียบร้อย');
+    } else {
+      await sbPost('classes', body);
+      showToast('เพิ่ม Class เรียบร้อย');
+    }
+    document.getElementById('class-modal').classList.remove('open');
+    await loadClasses();
+    await populateSessionClassDropdown();
+    await loadHistoryFilter();
+  } catch(e) {
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'บันทึก';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEW 3: ADD SESSION
+══════════════════════════════════════════════════════════ */
+async function populateSessionClassDropdown() {
+  try {
+    const classes = await sbGet('classes?is_active=eq.true&order=name&select=id,name,class_type');
+    const sel = document.getElementById('session-class-id');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— เลือก Class —</option>' +
+      classes.map(c => `<option value="${c.id}">${TYPE_ICONS[(c.class_type||'other').toLowerCase()]||'⭐'} ${c.name}</option>`).join('');
+    if (prev) sel.value = prev;
+  } catch(e) {
+    showToast('โหลดรายการ Class ไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+async function saveSession() {
+  const classId = document.getElementById('session-class-id').value;
+  const date = document.getElementById('session-date').value;
+  const time = document.getElementById('session-start-time').value;
+  if (!classId) { showToast('กรุณาเลือก Class', 'error'); return; }
+  if (!date) { showToast('กรุณาเลือกวันที่', 'error'); return; }
+  if (!time) { showToast('กรุณาระบุเวลาเริ่ม', 'error'); return; }
+
+  const body = {
+    class_id: parseInt(classId),
+    session_date: date,
+    start_time: time + ':00',
+    notes: document.getElementById('session-notes').value.trim() || null,
+    actual_count: 0
+  };
+
+  const btn = document.getElementById('btn-save-session');
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+
+  try {
+    const result = await sbPost('class_sessions', body);
+    showToast('เพิ่ม Session เรียบร้อย');
+    // Reset form
+    document.getElementById('session-class-id').value = '';
+    document.getElementById('session-notes').value = '';
+    document.getElementById('session-date').value = todayStr();
+    document.getElementById('session-start-time').value = '';
+    // Go to session detail
+    const newId = Array.isArray(result) ? result[0].id : result.id;
+    openSessionDetail(newId);
+  } catch(e) {
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'บันทึก Session';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEW 4: SESSION DETAIL & ATTENDANCE
+══════════════════════════════════════════════════════════ */
+async function openSessionDetail(sessionId) {
+  currentSessionId = sessionId;
+  attendedMemberIds = new Set();
+  switchView('session-detail');
+  document.getElementById('session-info-bar').innerHTML = '<div class="loader"><div class="spin"></div></div>';
+  document.getElementById('attendance-list').innerHTML = '<div class="loader"><div class="spin"></div> กำลังโหลด...</div>';
+  document.getElementById('member-search').value = '';
+  document.getElementById('member-search-results').innerHTML = '';
+
+  try {
+    const [sessions, attendance] = await Promise.all([
+      sbGet('class_sessions?id=eq.' + sessionId + '&select=*,classes(name,instructor,capacity,class_type)'),
+      sbGet('attendance?session_id=eq.' + sessionId + '&select=*,members(nickname,fullname,membership_status)&order=attended_at')
+    ]);
+    if (!sessions.length) { showToast('ไม่พบ Session', 'error'); return; }
+    currentSessionData = sessions[0];
+    currentActualCount = sessions[0].actual_count || 0;
+
+    // Set attended members
+    attendance.forEach(a => { if (a.member_id) attendedMemberIds.add(a.member_id); });
+
+    renderSessionInfo(currentSessionData);
+    renderAttendanceList(attendance);
+    updateCountDisplay();
+  } catch(e) {
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+function renderSessionInfo(s) {
+  const cls = s.classes || {};
+  const typeKey = (cls.class_type || 'other').toLowerCase();
+  document.getElementById('session-info-bar').innerHTML = `
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:24px;">${TYPE_ICONS[typeKey] || '⭐'}</span>
+      <div>
+        <div style="font-size:16px; font-weight:700;">${cls.name || '—'}</div>
+        <div class="attendance-meta">
+          <span class="session-time-badge">${fmtDate(s.session_date)} ${fmtTime(s.start_time)}</span>
+          <span class="type-badge type-${typeKey}">${TYPE_LABELS[typeKey] || typeKey}</span>
+          ${cls.instructor ? '<span style="font-size:12px; color:var(--text2);">👤 '+cls.instructor+'</span>' : ''}
+        </div>
+        ${s.notes ? '<div style="font-size:12px; color:var(--text2); margin-top:4px;">📝 '+s.notes+'</div>' : ''}
+      </div>
+    </div>`;
+  document.getElementById('session-capacity-label').textContent = 'ความจุ: ' + (cls.capacity || '—') + ' คน';
+}
+
+function updateCountDisplay() {
+  document.getElementById('count-display').textContent = currentActualCount;
+  const cap = currentSessionData?.classes?.capacity;
+  if (cap) {
+    document.getElementById('session-capacity-label').textContent = 'ความจุ: ' + cap + ' คน';
+  }
+}
+
+function adjustCount(delta) {
+  const cap = currentSessionData?.classes?.capacity;
+  let newVal = currentActualCount + delta;
+  newVal = Math.max(0, newVal);                          // floor at 0
+  if (cap != null) newVal = Math.min(cap, newVal);       // ceiling at capacity
+  if (newVal === currentActualCount) return;
+  currentActualCount = newVal;
+  updateCountDisplay();
+  // Debounce save
+  clearTimeout(saveCountTimeout);
+  saveCountTimeout = setTimeout(saveActualCount, 800);
+}
+
+async function saveActualCount() {
+  try {
+    await sbPatch('class_sessions', 'id=eq.' + currentSessionId, { actual_count: currentActualCount });
+  } catch(e) {
+    showToast('บันทึกจำนวนไม่สำเร็จ', 'error');
+  }
+}
+
+function renderAttendanceList(attendance) {
+  const el = document.getElementById('attendance-list');
+  document.getElementById('attendance-count-label').textContent = attendance.length + ' คน';
+  if (!attendance.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:24px;"><div class="empty-icon" style="font-size:32px;">👤</div><div class="empty-title">ยังไม่มีผู้เข้าร่วม</div><div class="empty-sub">ค้นหาสมาชิกด้านบนเพื่อเพิ่ม</div></div>';
+    return;
+  }
+  el.innerHTML = attendance.map(a => {
+    const m = a.members || {};
+    const initial = (m.nickname || m.fullname || '?')[0].toUpperCase();
+    const isActive = m.membership_status === 'active';
+    return `<div class="member-row">
+      <div class="member-avatar ${isActive ? 'active-member' : ''}">${initial}</div>
+      <div>
+        <div class="member-name">${m.nickname || '—'}</div>
+        <div class="member-full">${m.fullname || ''}</div>
+      </div>
+      <span class="member-check">✓</span>
+    </div>`;
+  }).join('');
+}
+
+/* — Member Search — */
+function onMemberSearch(q) {
+  clearTimeout(memberSearchTimeout);
+  if (!q.trim()) {
+    document.getElementById('member-search-results').innerHTML = '';
+    return;
+  }
+  memberSearchTimeout = setTimeout(() => searchMembers(q.trim()), 300);
+}
+
+async function searchMembers(q) {
+  const el = document.getElementById('member-search-results');
+  el.innerHTML = '<div class="loader" style="padding:12px;"><div class="spin"></div></div>';
+  try {
+    // Search by nickname or fullname
+    const results = await sbGet(
+      `members?or=(nickname.ilike.*${encodeURIComponent(q)}*,fullname.ilike.*${encodeURIComponent(q)}*)&select=id,nickname,fullname,membership_status&limit=10`
+    );
+    if (!results.length) {
+      el.innerHTML = '<div style="padding:12px 16px; font-size:13px; color:var(--text3);">ไม่พบสมาชิก</div>';
+      return;
+    }
+    el.innerHTML = results.map(m => {
+      const already = attendedMemberIds.has(m.id);
+      const initial = (m.nickname || m.fullname || '?')[0].toUpperCase();
+      const isActive = m.membership_status === 'active';
+      return `<div class="member-row" onclick="${already ? '' : 'addAttendance(' + m.id + ')'}" style="${already ? 'opacity:0.5; cursor:default;' : ''}">
+        <div class="member-avatar ${isActive ? 'active-member' : ''}">${initial}</div>
+        <div>
+          <div class="member-name">${m.nickname || '—'}</div>
+          <div class="member-full">${m.fullname || ''} ${isActive ? '<span class="pill pill-green" style="margin-left:4px;">active</span>' : ''}</div>
+        </div>
+        ${already ? '<span class="member-check">✓</span>' : '<span style="color:var(--accent); font-size:20px; margin-left:auto;">＋</span>'}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:12px 16px; font-size:13px; color:var(--red);">เกิดข้อผิดพลาด</div>';
+  }
+}
+
+async function addAttendance(memberId) {
+  if (attendedMemberIds.has(memberId)) return;
+  attendedMemberIds.add(memberId);
+
+  try {
+    await sbPost('attendance', {
+      session_id: currentSessionId,
+      member_id: memberId,
+      attended_at: new Date().toISOString(),
+      recorded_by: 'staff_ops'
+    });
+    // Update actual_count
+    currentActualCount = attendedMemberIds.size;
+    updateCountDisplay();
+    await saveActualCount();
+    showToast('เพิ่มสมาชิกเรียบร้อย');
+    // Refresh search results and attendance list
+    const q = document.getElementById('member-search').value.trim();
+    if (q) searchMembers(q);
+    // Reload attendance
+    const attendance = await sbGet('attendance?session_id=eq.' + currentSessionId + '&select=*,members(nickname,fullname,membership_status)&order=attended_at');
+    renderAttendanceList(attendance);
+  } catch(e) {
+    attendedMemberIds.delete(memberId);
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEW 5: HISTORY
+══════════════════════════════════════════════════════════ */
+async function loadHistoryFilter() {
+  try {
+    const classes = await sbGet('classes?order=name&select=id,name');
+    const bar = document.getElementById('history-filter-bar');
+    const current = historyFilterClassId;
+    bar.innerHTML = `<button class="filter-chip ${current === '' ? 'active' : ''}" data-class-id="" onclick="setHistoryFilter('', this)">ทั้งหมด</button>` +
+      classes.map(c => `<button class="filter-chip ${current === String(c.id) ? 'active' : ''}" data-class-id="${c.id}" onclick="setHistoryFilter('${c.id}', this)">${c.name}</button>`).join('');
+  } catch(e) {
+    showToast('โหลด filter ไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+async function loadHistory() {
+  await loadHistoryFilter();
+  await fetchAndRenderHistory();
+}
+
+async function fetchAndRenderHistory() {
+  const el = document.getElementById('history-list');
+  el.innerHTML = '<div class="loader"><div class="spin"></div> กำลังโหลด...</div>';
+  try {
+    let path = 'class_sessions?select=*,classes(name,class_type,capacity)&order=session_date.desc,start_time.desc&limit=30';
+    if (historyFilterClassId) path += '&class_id=eq.' + historyFilterClassId;
+    const sessions = await sbGet(path);
+    if (!sessions.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">ไม่มี Session</div><div class="empty-sub">ยังไม่มีประวัติ Session</div></div>';
+      return;
+    }
+    el.innerHTML = '<div class="list-container">' + sessions.map(s => {
+      const cls = s.classes || {};
+      const typeKey = (cls.class_type || 'other').toLowerCase();
+      return `<div class="list-item" onclick="openSessionDetail(${s.id})">
+        <div class="list-item-icon type-icon-${typeKey}">${TYPE_ICONS[typeKey] || '⭐'}</div>
+        <div class="list-item-body">
+          <div class="list-item-title">${cls.name || '—'}</div>
+          <div class="list-item-sub">${fmtDate(s.session_date)} · ${fmtTime(s.start_time)}</div>
+        </div>
+        <div class="list-item-right">
+          <strong>${s.actual_count || 0}</strong>
+          <span>${cls.capacity ? '/ '+cls.capacity : ''} คน</span>
+        </div>
+        <span class="chevron">›</span>
+      </div>`;
+    }).join('') + '</div>';
+  } catch(e) {
+    showToast('โหลดประวัติไม่สำเร็จ: ' + e.message, 'error');
+    el.innerHTML = '<div class="loader" style="color:var(--red)">เกิดข้อผิดพลาด</div>';
+  }
+}
+
+function setHistoryFilter(classId, btn) {
+  historyFilterClassId = classId;
+  document.querySelectorAll('#history-filter-bar .filter-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.classId === classId);
+  });
+  fetchAndRenderHistory();
+}
+</script>
+</body>
+</html>
