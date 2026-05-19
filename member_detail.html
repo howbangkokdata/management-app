@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOW Bangkok — Member Detail</title>
+  <script src="supabase_key.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F7F5F0;
+      --surface: #FFFFFF;
+      --border: #DED8CC;
+      --border-subtle: #EFEAE1;
+      --gold: #8E6724;
+      --gold-mid: #B9892D;
+      --gold-light: #FFF7E8;
+      --text: #17150F;
+      --text-2: #3D3A33;
+      --muted: #716C62;
+      --subtle: #9A9488;
+      --alert: #B42318;
+      --alert-light: #FFF1EE;
+      --success: #17663D;
+      --success-light: #F0FAF4;
+      --blue: #1F4F8E;
+      --blue-light: #EEF3FB;
+      --amber: #B8860B;
+      --amber-light: #FFFBEB;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.55;
+      background: linear-gradient(180deg, rgba(255,255,255,.6), rgba(247,245,240,0) 220px), var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Login screen ── */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 20px;
+      padding: 40px;
+    }
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 16px 40px rgba(72,57,30,.07);
+    }
+    .login-title { font-size: 13px; font-weight: 800; letter-spacing: 2px; color: var(--gold); margin-bottom: 4px; }
+    .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    .btn-google {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 12px 20px; border: 1.5px solid var(--border);
+      border-radius: 8px; background: var(--surface); cursor: pointer;
+      font-size: 14px; font-weight: 600; color: var(--text); transition: all .15s;
+    }
+    .btn-google:hover { border-color: var(--gold-mid); background: var(--gold-light); }
+    .btn-google img { width: 20px; height: 20px; }
+    .login-hint { font-size: 11px; color: var(--subtle); margin-top: 16px; }
+    .login-error { display: none; background: var(--alert-light); border: 1px solid #f5c6c2; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--alert); margin-top: 12px; }
+
+    /* ── App wrapper ── */
+    #app-wrapper { display: none; }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0 32px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 0 rgba(23,21,15,.04);
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 10px; cursor: pointer; transition: all .15s; text-decoration: none;
+    }
+    .back-btn:hover { border-color: var(--gold-mid); color: var(--gold); }
+    .header-brand { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: var(--gold); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    #user-email { font-size: 11px; color: var(--muted); }
+    .btn-signout {
+      font-size: 11px; color: var(--muted); background: var(--bg);
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: 3px 12px; cursor: pointer; transition: all .15s;
+    }
+    .btn-signout:hover { border-color: var(--alert); color: var(--alert); }
+
+    /* ── Content ── */
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 32px 60px;
+    }
+
+    /* ── Loading ── */
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; padding: 60px; color: var(--muted); font-size: 13px;
+    }
+    .spinner {
+      width: 20px; height: 20px; border: 2px solid var(--border);
+      border-top-color: var(--gold-mid); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Member header card ── */
+    .member-header-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 28px rgba(72,57,30,.05);
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    .avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: var(--gold-light); border: 2px solid var(--gold-mid);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 800; color: var(--gold);
+      flex-shrink: 0;
+    }
+    .member-info { flex: 1; min-width: 0; }
+    .member-name { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+    .member-nickname { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      border: 1px solid;
+    }
+    .badge-active { background: var(--success-light); border-color: #a8dfc0; color: var(--success); }
+    .badge-expiring { background: var(--amber-light); border-color: #f0d070; color: var(--amber); }
+    .badge-expired { background: var(--alert-light); border-color: #f5c6c2; color: var(--alert); }
+    .badge-type { background: var(--blue-light); border-color: #b8cee8; color: var(--blue); }
+    .badge-neutral { background: var(--bg); border-color: var(--border); color: var(--muted); }
+    .contact-row { display: flex; flex-wrap: wrap; gap: 16px; }
+    .contact-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+    .contact-item strong { color: var(--text-2); }
+    .days-block { text-align: right; flex-shrink: 0; }
+    .days-num { font-size: 48px; font-weight: 800; line-height: 1; color: var(--gold); }
+    .days-num.critical { color: var(--alert); }
+    .days-num.expiring { color: var(--amber); }
+    .days-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .days-date { font-size: 12px; font-weight: 600; color: var(--text-2); margin-top: 4px; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 4px 14px rgba(72,57,30,.04);
+      text-align: center;
+    }
+    .stat-num { font-size: 28px; font-weight: 800; color: var(--gold); line-height: 1.1; }
+    .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 600; }
+
+    /* ── Grid layout ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+    .one-col { margin-bottom: 18px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px 24px;
+      box-shadow: 0 8px 24px rgba(72,57,30,.045);
+    }
+    .card-title {
+      font-size: 14px; font-weight: 800; color: var(--text);
+      margin-bottom: 4px;
+    }
+    .card-sub { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+    .card-divider { border: none; border-top: 1px solid var(--border-subtle); margin: 14px 0; }
+
+    /* ── Contract timeline ── */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .timeline-item { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+    .timeline-item:last-child { border-bottom: none; }
+    .tl-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+    .tl-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid;
+    }
+    .tl-dot-new { background: var(--blue-light); border-color: var(--blue); }
+    .tl-dot-renew { background: var(--success-light); border-color: var(--success); }
+    .tl-line { width: 2px; flex: 1; background: var(--border-subtle); margin-top: 4px; }
+    .tl-body { flex: 1; min-width: 0; }
+    .tl-label { font-size: 12px; font-weight: 700; color: var(--text-2); }
+    .tl-year { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .tl-right { text-align: right; flex-shrink: 0; }
+    .tl-price { font-size: 14px; font-weight: 800; color: var(--gold); }
+    .tl-method { font-size: 10px; color: var(--subtle); margin-top: 1px; }
+
+    /* ── Activity log ── */
+    .activity-list { display: flex; flex-direction: column; gap: 0; }
+    .activity-item { padding: 10px 0; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 12px; align-items: flex-start; }
+    .activity-item:last-child { border-bottom: none; }
+    .act-dot {
+      width: 8px; height: 8px; border-radius: 50; flex-shrink: 0;
+      margin-top: 5px; border-radius: 50%;
+    }
+    .act-body { flex: 1; min-width: 0; }
+    .act-summary { font-size: 13px; color: var(--text-2); }
+    .act-meta { font-size: 11px; color: var(--subtle); margin-top: 2px; }
+    .act-outcome { font-size: 11px; font-weight: 600; color: var(--success); margin-top: 2px; }
+    .act-date { font-size: 11px; color: var(--subtle); white-space: nowrap; flex-shrink: 0; }
+    .empty-state { padding: 24px; text-align: center; color: var(--subtle); font-size: 12px; }
+
+    /* ── Notes ── */
+    .note-item { padding: 10px 12px; background: var(--bg); border-radius: 8px; margin-bottom: 8px; }
+    .note-item:last-child { margin-bottom: 0; }
+    .note-text { font-size: 13px; color: var(--text-2); }
+    .note-meta { font-size: 11px; color: var(--subtle); margin-top: 4px; }
+
+    /* ── Class table ── */
+    .class-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .class-table th {
+      font-size: 10.5px; font-weight: 700; color: var(--muted);
+      text-align: left; padding: 8px 12px;
+      background: #F9F6EF; border-top: 1px solid var(--border-subtle);
+    }
+    .class-table th:first-child { border-top-left-radius: 8px; }
+    .class-table th:last-child { border-top-right-radius: 8px; }
+    .class-table td { font-size: 13px; padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--text-2); }
+    .class-table tr:last-child td { border-bottom: none; }
+    .class-table tr:hover td { background: var(--gold-light); }
+    .type-chip {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 700;
+      background: var(--blue-light); color: var(--blue); border: 1px solid #b8cee8;
+    }
+
+    /* ── Renewal status ── */
+    .renewal-box {
+      background: var(--bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .renewal-item { display: flex; flex-direction: column; gap: 2px; }
+    .renewal-label { font-size: 10px; font-weight: 700; color: var(--subtle); text-transform: uppercase; letter-spacing: .5px; }
+    .renewal-val { font-size: 14px; font-weight: 700; color: var(--text-2); }
+
+    @media (max-width: 900px) {
+      .content { padding: 20px 16px 40px; }
+      .header { padding: 0 16px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .member-header-card { flex-direction: column; gap: 16px; }
+      .days-block { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">HOW BANGKOK</div>
+    <div class="login-sub">Member Management</div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Sign in with Google
+    </button>
+    <div class="login-hint">เฉพาะ @howbangkok.com เท่านั้น</div>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app-wrapper">
+  <header class="header">
+    <div class="header-left">
+      <a class="back-btn" href="/members">← Members</a>
+      <span class="header-brand">HOW BANGKOK</span>
+    </div>
+    <div class="header-right">
+      <span id="user-email"></span>
+      <button class="btn-signout" onclick="signOut()">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <span>กำลังโหลดข้อมูลสมาชิก...</span>
+    </div>
+    <div id="page-content" style="display:none;"></div>
+    <div id="error-state" style="display:none;" class="empty-state">
+      ไม่พบข้อมูลสมาชิก หรือ Supabase key ยังไม่ถูกตั้งค่า
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Supabase ──
+const SB_URL = 'https://argdnwhxwykdwrwkojyb.supabase.co';
+const SB_KEY = window.HowSupabaseKey ? window.HowSupabaseKey.get() : '';
+const SB_HDR = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` };
+
+async function sbGet(path) {
+  if (!SB_KEY) return null;
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${path}`, { headers: SB_HDR });
+    return r.ok ? r.json() : null;
+  } catch(e) { return null; }
+}
+
+// ── Helpers ──
+function fmt(date) {
+  if (!date) return '—';
+  const d = new Date(date);
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+function fmtMoney(n) {
+  if (!n) return '—';
+  return Number(n).toLocaleString('th-TH') + ' ฿';
+}
+function daysLeft(dateStr) {
+  if (!dateStr) return null;
+  return Math.floor((new Date(dateStr) - new Date().setHours(0,0,0,0)) / 86400000);
+}
+function initials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(' ');
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+}
+function channelColor(channel) {
+  const map = { line: '#06B', call: '#17663D', email: '#8E6724', meeting: '#4A1FA0', visit: '#B42318' };
+  return map[(channel||'').toLowerCase()] || '#716C62';
+}
+
+// ── Main render ──
+async function loadMember(memberId) {
+  const [memberArr, contracts, contactLogs, memberNotes, renewalArr, attendanceArr] = await Promise.all([
+    sbGet(`members?id=eq.${memberId}&limit=1`),
+    sbGet(`v_member_history?member_id=eq.${memberId}&order=contract_year.asc`),
+    sbGet(`contact_logs?member_id=eq.${memberId}&order=contact_date.desc&limit=20`),
+    sbGet(`member_notes?member_id=eq.${memberId}&order=created_at.desc&limit=10`),
+    sbGet(`renewal_tracking?member_id=eq.${memberId}&order=created_at.desc&limit=1`),
+    sbGet(`attendance?member_id=eq.${memberId}&select=id,attended_at,session_id,class_sessions(session_date,class_id,classes(name,class_type,instructor))&order=attended_at.desc&limit=15`),
+  ]);
+
+  const loading = document.getElementById('loading');
+  const content = document.getElementById('page-content');
+  const errEl   = document.getElementById('error-state');
+  loading.style.display = 'none';
+
+  if (!memberArr || memberArr.length === 0) {
+    errEl.style.display = 'block';
+    return;
+  }
+  content.style.display = 'block';
+  renderPage(memberArr, contracts, contactLogs, memberNotes, renewalArr, attendanceArr);
+}
+
+function renderPage(memberArr, contracts, contactLogs, memberNotes, renewalArr, attendanceArr) {
+  const content = document.getElementById('page-content');
+  const m = memberArr[0];
+  const dl = daysLeft(m.end_date);
+  const renewal = renewalArr && renewalArr[0];
+
+  let statusLabel = 'Active', statusCls = 'badge-active';
+  if (dl !== null && dl < 0)       { statusLabel = 'Expired';              statusCls = 'badge-expired';  }
+  else if (dl !== null && dl <= 30) { statusLabel = `หมดใน ${dl} วัน`;    statusCls = 'badge-expired';  }
+  else if (dl !== null && dl <= 90) { statusLabel = `Expiring ${dl} วัน`; statusCls = 'badge-expiring'; }
+
+  let daysCls = 'days-num';
+  if (dl !== null && dl <= 30)      daysCls += ' critical';
+  else if (dl !== null && dl <= 90) daysCls += ' expiring';
+
+  const totalPaid     = contracts    ? contracts.reduce((s, c) => s + Number(c.net_amount || 0), 0) : 0;
+  const classCount    = attendanceArr ? attendanceArr.length : 0;
+  const contractCount = contracts    ? contracts.length : 0;
+
+  content.innerHTML = `
+    <div class="member-header-card">
+      <div class="avatar">${initials(m.nickname || m.fullname)}</div>
+      <div class="member-info">
+        <div class="member-name">${m.fullname || m.nickname || '—'}</div>
+        <div class="member-nickname">${m.nickname || ''} ${m.company ? '· ' + m.company : ''}</div>
+        <div class="badges">
+          <span class="badge ${statusCls}">${statusLabel}</span>
+          ${m.membership_type ? `<span class="badge badge-type">${m.membership_type}</span>` : ''}
+          ${m.membership_status === 'active' ? '' : `<span class="badge badge-neutral">${m.membership_status || ''}</span>`}
+        </div>
+        <div class="contact-row">
+          ${m.phone    ? `<div class="contact-item">📞 <strong>${m.phone}</strong></div>` : ''}
+          ${m.line_id  ? `<div class="contact-item">💬 Line: <strong>${m.line_id}</strong></div>` : ''}
+          ${m.app_email? `<div class="contact-item">✉️ <strong>${m.app_email}</strong></div>` : ''}
+          ${m.industry ? `<div class="contact-item">🏢 <strong>${m.industry}</strong></div>` : ''}
+        </div>
+      </div>
+      <div class="days-block">
+        <div class="${daysCls}">${dl !== null ? Math.max(0, dl) : '—'}</div>
+        <div class="days-label">วันที่เหลือ</div>
+        <div class="days-date">ถึง ${fmt(m.end_date)}</div>
+        ${m.start_date ? `<div class="days-label" style="margin-top:8px;">เริ่ม ${fmt(m.start_date)}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num">${contractCount}</div><div class="stat-label">สัญญาทั้งหมด</div></div>
+      <div class="stat-card"><div class="stat-num">${totalPaid > 0 ? (totalPaid/1000).toFixed(0)+'k' : '—'}</div><div class="stat-label">ยอดชำระรวม (฿)</div></div>
+      <div class="stat-card"><div class="stat-num">${classCount}</div><div class="stat-label">Classes ที่เข้าร่วม</div></div>
+      <div class="stat-card"><div class="stat-num">${m.last_checkin ? fmt(m.last_checkin) : '—'}</div><div class="stat-label">Check-in ล่าสุด</div></div>
+    </div>
+
+    ${renewal ? `
+    <div class="card one-col" style="margin-bottom:18px;">
+      <div class="card-title">🔄 สถานะการต่ออายุ</div>
+      <div class="card-sub">ข้อมูลจาก Renewal Tracking</div>
+      <div class="renewal-box">
+        <div class="renewal-item"><span class="renewal-label">Status</span><span class="renewal-val">${renewal.status || '—'}</span></div>
+        <div class="renewal-item"><span class="renewal-label">Likelihood</span><span class="renewal-val">${renewal.likelihood || '—'}</span></div>
+        <div class="renewal-item"><span class="renewal-label">Engagement Score</span><span class="renewal-val">${renewal.engagement_score != null ? renewal.engagement_score+'/10' : '—'}</span></div>
+        <div class="renewal-item"><span class="renewal-label">Director POC</span><span class="renewal-val">${renewal.director_poc || '—'}</span></div>
+        ${renewal.deadline ? `<div class="renewal-item"><span class="renewal-label">Deadline</span><span class="renewal-val">${fmt(renewal.deadline)}</span></div>` : ''}
+        ${renewal.remark   ? `<div class="renewal-item" style="flex:1"><span class="renewal-label">Remark</span><span class="renewal-val" style="font-size:13px;font-weight:400;">${renewal.remark}</span></div>` : ''}
+      </div>
+    </div>` : ''}
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">📋 ประวัติสัญญาและการชำระเงิน</div>
+        <div class="card-sub">เรียงตามปี</div>
+        ${buildContractTimeline(contracts)}
+      </div>
+      <div class="card">
+        <div class="card-title">📞 Activity Log</div>
+        <div class="card-sub">การติดต่อล่าสุด</div>
+        ${buildActivityLog(contactLogs)}
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">📝 Member Notes</div>
+        <div class="card-sub">บันทึกภายใน</div>
+        ${buildNotes(memberNotes)}
+      </div>
+      <div class="card">
+        <div class="card-title">🎓 Classes ที่เข้าร่วม</div>
+        <div class="card-sub">${classCount} sessions ล่าสุด</div>
+        ${buildClassTable(attendanceArr)}
+      </div>
+    </div>
+  `;
+}
+
+function buildContractTimeline(contracts) {
+  if (!contracts || contracts.length === 0)
+    return '<div class="empty-state">ยังไม่มีประวัติสัญญา</div>';
+
+  return `<div class="timeline">` + contracts.map((c, i) => {
+    const isFirst = i === 0;
+    const dotCls = isFirst ? 'tl-dot-new' : 'tl-dot-renew';
+    const label = isFirst ? `สมัครใหม่ ปี ${c.contract_year}` : `ต่ออายุครั้งที่ ${i} (ปี ${c.contract_year})`;
+    const statusColor = c.contract_status === 'active' ? 'var(--success)' : 'var(--muted)';
+    return `
+    <div class="timeline-item">
+      <div class="tl-dot-col">
+        <div class="tl-dot ${dotCls}"></div>
+        ${i < contracts.length - 1 ? '<div class="tl-line"></div>' : ''}
+      </div>
+      <div class="tl-body">
+        <div class="tl-label">${label}</div>
+        <div class="tl-year" style="color:${statusColor};font-weight:600;">${c.contract_status || '—'}</div>
+        ${c.payment_date ? `<div class="tl-year">จ่าย ${fmt(c.payment_date)} · ${c.payment_method || ''}</div>` : ''}
+        ${c.months ? `<div class="tl-year">${c.months} เดือน</div>` : ''}
+      </div>
+      <div class="tl-right">
+        <div class="tl-price">${fmtMoney(c.net_amount || c.price)}</div>
+        <div class="tl-method">${c.wht_status ? 'WHT: ' + c.wht_status : ''}</div>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function buildActivityLog(logs) {
+  if (!logs || logs.length === 0)
+    return '<div class="empty-state">ยังไม่มีประวัติการติดต่อ</div>';
+
+  return `<div class="activity-list">` + logs.map(l => {
+    const color = channelColor(l.channel);
+    return `
+    <div class="activity-item">
+      <div class="act-dot" style="background:${color};"></div>
+      <div class="act-body">
+        <div class="act-summary">${l.summary || '—'}</div>
+        <div class="act-meta">${l.channel || ''} ${l.contacted_by ? '· โดย ' + l.contacted_by : ''}</div>
+        ${l.outcome ? `<div class="act-outcome">→ ${l.outcome}</div>` : ''}
+        ${l.next_action ? `<div class="act-meta" style="color:var(--amber);">Next: ${l.next_action}${l.next_date ? ' · ' + fmt(l.next_date) : ''}</div>` : ''}
+      </div>
+      <div class="act-date">${fmt(l.contact_date)}</div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function buildNotes(notes) {
+  if (!notes || notes.length === 0)
+    return '<div class="empty-state">ยังไม่มี notes</div>';
+
+  return notes.map(n => `
+    <div class="note-item">
+      <div class="note-text">${n.note}</div>
+      <div class="note-meta">${n.note_type ? '[' + n.note_type + '] ' : ''}${n.created_by || ''} · ${fmt(n.created_at)}</div>
+    </div>`
+  ).join('');
+}
+
+function buildClassTable(attendance) {
+  if (!attendance || attendance.length === 0)
+    return '<div class="empty-state">ยังไม่มีประวัติ class</div>';
+
+  const rows = attendance.map(a => {
+    const session = a.class_sessions || {};
+    const cls = session.classes || {};
+    return `
+    <tr>
+      <td>${cls.name || '—'}</td>
+      <td><span class="type-chip">${cls.class_type || '—'}</span></td>
+      <td>${fmt(session.session_date || a.attended_at)}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <table class="class-table">
+    <thead>
+      <tr>
+        <th>Class</th>
+        <th>ประเภท</th>
+        <th>วันที่</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── Firebase Auth ──
+const firebaseConfig = {
+  apiKey: "AIzaSyDotx7LtoUMtLdn5jiuMiRa3cH3FngTASY",
+  authDomain: "howbkkdb.firebaseapp.com",
+  projectId: "howbkkdb",
+  storageBucket: "howbkkdb.firebasestorage.app",
+  messagingSenderId: "889419611516",
+  appId: "1:889419611516:web:49a3ecd68c1bfa9f63b8f9"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+auth.onAuthStateChanged(user => {
+  const loginScreen = document.getElementById('login-screen');
+  const appWrapper  = document.getElementById('app-wrapper');
+  const errorEl     = document.getElementById('login-error');
+  const params      = new URLSearchParams(location.search);
+  const isPreview   = params.get('preview') === '1';
+
+  if (isPreview) {
+    document.getElementById('user-email').textContent = 'visual preview';
+    loginScreen.style.display = 'none';
+    appWrapper.style.display  = 'block';
+    loadPreviewData();
+    return;
+  }
+
+  if (user && user.email.endsWith('@howbangkok.com')) {
+    document.getElementById('user-email').textContent = user.email;
+    loginScreen.style.display = 'none';
+    appWrapper.style.display  = 'block';
+
+    const memberId = params.get('id');
+    if (memberId) {
+      loadMember(memberId);
+    } else {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-state').style.display = 'block';
+      document.getElementById('error-state').textContent = 'ไม่มี member ID ใน URL — ใช้ ?id=MEMBER_UUID';
+    }
+  } else {
+    if (user) { auth.signOut(); errorEl.textContent = 'เฉพาะ @howbangkok.com เท่านั้น'; errorEl.style.display = 'block'; }
+    loginScreen.style.display = 'flex';
+    appWrapper.style.display  = 'none';
+  }
+});
+
+function loadPreviewData() {
+  const MOCK_MEMBER    = [{ id:'preview', nickname:'อาร์ต', fullname:'วุทธิพัฒน์ วิศาลศักดิ์', app_email:'art@example.com', phone:'0812345678', line_id:'art_how', membership_type:'Fellow 1Y', membership_status:'active', price_2026:350000, start_date:'2024-06-01', end_date:'2026-05-31', last_checkin:'2026-05-10', company:'Visalsakdi Co.', industry:'Finance', referred_by:null }];
+  const MOCK_CONTRACTS = [
+    { member_id:'preview', contract_id:'c1', contract_year:2024, contract_status:'expired',  price:420000, net_amount:385000, payment_method:'transfer', payment_date:'2024-06-01', wht_status:'done',    months:12, contract_number:1 },
+    { member_id:'preview', contract_id:'c2', contract_year:2025, contract_status:'expired',  price:350000, net_amount:320000, payment_method:'2c2p',     payment_date:'2025-06-01', wht_status:'done',    months:12, contract_number:2 },
+    { member_id:'preview', contract_id:'c3', contract_year:2026, contract_status:'active',   price:350000, net_amount:350000, payment_method:'transfer', payment_date:'2026-05-15', wht_status:'pending', months:12, contract_number:3 },
+  ];
+  const MOCK_LOGS = [
+    { contact_date:'2026-05-12', channel:'line',    contacted_by:'Yui',   summary:'ติดต่อเรื่องต่ออายุ — ยืนยันต่อแน่นอน', outcome:'ยืนยันต่อ', next_action:'รอใบแจ้งหนี้', next_date:'2026-05-20' },
+    { contact_date:'2026-04-28', channel:'call',    contacted_by:'Tak',   summary:'โทรตามต่ออายุรอบแรก', outcome:'นัดคุยอีกรอบ', next_action:null, next_date:null },
+    { contact_date:'2026-03-10', channel:'meeting', contacted_by:'Mambo', summary:'ประชุมรายไตรมาส — feedback ดี', outcome:'positive', next_action:null, next_date:null },
+  ];
+  const MOCK_NOTES = [
+    { note:'VIP member — ให้ความสำคัญด้าน networking', note_type:'segment', created_by:'Benz', created_at:'2026-01-15' },
+    { note:'สนใจ class ด้าน Leadership และ Finance', note_type:'interest', created_by:'Yui', created_at:'2025-11-20' },
+  ];
+  const MOCK_RENEWAL = [{ status:'billing', likelihood:'yes', engagement_score:8, director_poc:'Tak', deadline:'2026-05-31', remark:'ต่อแน่นอน ราคาเดิม 350k' }];
+  const MOCK_ATTENDANCE = [
+    { attended_at:'2026-04-20', class_sessions:{ session_date:'2026-04-20', classes:{ name:'Leadership Masterclass', class_type:'masterclass', instructor:'Dr. Somchai' } } },
+    { attended_at:'2026-03-15', class_sessions:{ session_date:'2026-03-15', classes:{ name:'Finance & Investment Talk', class_type:'talk', instructor:'Khun Prasong' } } },
+    { attended_at:'2026-02-10', class_sessions:{ session_date:'2026-02-10', classes:{ name:'Wellness Morning', class_type:'wellness', instructor:'Ajarn Nit' } } },
+  ];
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('page-content').style.display = 'block';
+
+  // Reuse loadMember's render logic with mock data
+  renderPage(MOCK_MEMBER, MOCK_CONTRACTS, MOCK_LOGS, MOCK_NOTES, MOCK_RENEWAL, MOCK_ATTENDANCE);
+}
+
+function signInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ hd: 'howbangkok.com' });
+  document.getElementById('login-error').style.display = 'none';
+  auth.signInWithPopup(provider).catch(err => {
+    const e = document.getElementById('login-error');
+    e.textContent = err.message;
+    e.style.display = 'block';
+  });
+}
+function signOut() { auth.signOut(); }
+</script>
+</body>
+</html>

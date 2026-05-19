@@ -1730,6 +1730,7 @@ async function fetchSupabaseData() {
         if (dl !== null && dl <= 30) status = 'risk';
         else if (dl !== null && dl <= 90) status = 'expiring';
         return {
+          id: m.id,
           nickname: m.nickname || '—',
           fullname: m.fullname || '',
           type: m.membership_type || 'Unknown',
@@ -2154,6 +2155,7 @@ function recomputeRenewals(){
     .filter(m => m.daysLeft > 0 && m.daysLeft <= CFG.thresholdWatch)
     .sort((a, b) => a.daysLeft - b.daysLeft)
     .map(m => ({
+      id: m.id,
       name: (m.fullname && m.fullname !== 'nan') ? m.fullname + ' (' + m.nickname + ')' : m.nickname,
       owner: '—', qty: 1, daysLeft: m.daysLeft,
       endDate: m.endDate, stageIdx: -1, outcome: null,
@@ -2550,7 +2552,7 @@ function buildMemberTable(){
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td>
-        <div style="font-weight:600;font-size:12.5px;">${m.nickname}</div>
+        <div style="font-weight:600;font-size:12.5px;">${m.id?`<a href="member_detail.html?id=${m.id}" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border-subtle);">${m.nickname}</a>`:m.nickname}</div>
         ${(m.fullname&&m.fullname!=='nan')?`<div style="font-size:11px;color:var(--muted);margin-top:1px;">${m.fullname}</div>`:''}
       </td>
       <td><span class="pic-tag" title="${m.inferred?'ข้อมูลอนุมาน: Excel ยังแสดง Expired แต่ End date ยังอยู่ในอนาคต รอ confirm':''}" style="background:${m.type==='Renew'?'#EBF5EE':m.type==='Fellow'?'#EEF2FF':m.type==='Distinguish'?'#FFF8EE':m.type==='Barter'?'#F5F0FF':'#F5F5F5'};color:${m.type==='Renew'?'#1C7048':m.type==='Fellow'?'#3B5BDB':m.type==='Distinguish'?'#C49A3C':m.type==='Barter'?'#7C3AED':'#888'};${m.inferred?'border:1px dashed currentColor;opacity:0.75;':''}">${m.type}${m.inferred?'<span style="font-size:9px;vertical-align:super;margin-left:1px;">?</span>':''}</span></td>
@@ -2738,7 +2740,7 @@ function buildRenewalTable(){
     const currentStageName=r.stageIdx<0?'ยังไม่เริ่ม':r.stageIdx>=6?'เสร็จสิ้น':RENEW_STEPS[r.stageIdx];
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td style="font-weight:600;font-size:12.5px;">${r.name}</td>
+      <td style="font-weight:600;font-size:12.5px;">${r.id?`<a href="member_detail.html?id=${r.id}" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border-subtle);">${r.name}</a>`:r.name}</td>
       <td><span class="pic-tag">${r.owner}</span></td>
       <td>${labelChipHtml(lbl)}</td>
       <td>${r.daysLeft>0?daysChipHtml(r.daysLeft):'<span style="color:var(--muted);font-size:11px;">หมดแล้ว</span>'}</td>
@@ -3633,7 +3635,7 @@ function renderExpiringPaid() {
   tbody.innerHTML = displayed.map(m => {
     const urgStyle = m.daysLeft <= 30 ? 'color:var(--alert);font-weight:700;' : m.daysLeft <= 90 ? 'color:var(--warm);font-weight:600;' : '';
     return `<tr>
-      <td><div style="font-weight:700;">${m.nickname}</div><div style="font-size:11px;color:var(--muted);">${(m.fullname&&m.fullname!=='nan')?m.fullname:''}</div></td>
+      <td><div style="font-weight:700;">${m.id?`<a href="member_detail.html?id=${m.id}" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border-subtle);">${m.nickname}</a>`:m.nickname}</div><div style="font-size:11px;color:var(--muted);">${(m.fullname&&m.fullname!=='nan')?m.fullname:''}</div></td>
       <td><span style="font-size:11px;font-weight:600;">${m.type}</span></td>
       <td>${thDate(m.endDate)}</td>
       <td><span style="${urgStyle}">${m.daysLeft} วัน</span></td>
@@ -3768,11 +3770,14 @@ function buildStageFunnel() {
   const fc = document.getElementById('stage-funnel');
   if (!fc) return;
 
-  // ① Pipeline nodes — main flow (0-5) + Reject section separated
-  let html = '<div style="display:flex;flex-direction:column;gap:6px;">';
+  // ① Pipeline nodes — main flow (0-5) + Reject separated to the right
+  const rejectCnt = counts[6];
+  const clickReject = rejectCnt > 0 ? `onclick="filterLeadsByStage(6)" style="cursor:pointer;"` : '';
+
+  let html = '<div style="display:flex;align-items:center;gap:0;">';
 
   // Main conversion flow: stages 0–5
-  html += '<div class="sf-pipeline">';
+  html += '<div class="sf-pipeline" style="flex:0 0 auto;">';
   for (let i = 0; i <= 5; i++) {
     const cnt = counts[i];
     const s = stageStats[i];
@@ -3789,20 +3794,17 @@ function buildStageFunnel() {
   }
   html += '</div>';
 
-  // Reject section — visually separated
-  const rejectCnt = counts[6];
-  const clickReject = rejectCnt > 0 ? `onclick="filterLeadsByStage(6)" style="cursor:pointer;"` : '';
-  html += `<div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
-    <div style="flex:1;border-top:1.5px dashed var(--border-subtle);"></div>
-    <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px;white-space:nowrap;">ปฏิเสธ / ไม่สนใจ</span>
-    <div style="flex:1;border-top:1.5px dashed var(--border-subtle);"></div>
-  </div>
-  <div style="display:flex;justify-content:center;">
-    <div class="sf-node ${rejectCnt > 0 ? 'sf-stuck' : 'sf-empty'}" ${clickReject} title="Reject"
-      style="border-style:dashed;opacity:${rejectCnt > 0 ? '1' : '0.4'};">
-      <div class="sf-node-abbr">${STAGE_ABBR[6]}</div>
-      <div class="sf-node-count">${rejectCnt}</div>
-      <div class="sf-node-name">Reject</div>
+  // Reject — same row, separated by vertical dashed line
+  html += `<div style="display:flex;align-items:center;gap:0;padding-bottom:14px;flex-shrink:0;">
+    <div style="height:72px;border-left:1.5px dashed var(--border-subtle);margin:0 18px;"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+      <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px;white-space:nowrap;">ปฏิเสธ / ไม่สนใจ</span>
+      <div class="sf-node ${rejectCnt > 0 ? 'sf-stuck' : 'sf-empty'}" ${clickReject} title="Reject"
+        style="border-style:dashed;opacity:${rejectCnt > 0 ? '1' : '0.4'};">
+        <div class="sf-node-abbr">${STAGE_ABBR[6]}</div>
+        <div class="sf-node-count">${rejectCnt}</div>
+        <div class="sf-node-name">Reject</div>
+      </div>
     </div>
   </div>`;
 
@@ -3877,9 +3879,15 @@ function buildRenewalPipeline() {
   ];
 
   const total = 157;
-  let html = '<div class="sf-pipeline">';
-  RENEW_PIPELINE.forEach((s, i) => {
-    let cls = s.count > 0 ? (s.isDone ? 'sf-done' : s.isReject ? 'sf-stuck' : 'sf-active') : 'sf-empty';
+  const mainFlow   = RENEW_PIPELINE.filter(s => !s.isReject);
+  const rejectItem = RENEW_PIPELINE.find(s => s.isReject);
+
+  let html = '<div style="display:flex;align-items:center;gap:0;">';
+
+  // Main flow: 1C → Co → Bi → P
+  html += '<div class="sf-pipeline" style="flex:0 0 auto;">';
+  mainFlow.forEach((s, i) => {
+    let cls = s.count > 0 ? (s.isDone ? 'sf-done' : 'sf-active') : 'sf-empty';
     const pct = total > 0 ? Math.round((s.count/total)*100) : 0;
     html += `<div class="sf-node ${cls}">
       <div class="sf-node-abbr">${s.abbr}</div>
@@ -3887,8 +3895,27 @@ function buildRenewalPipeline() {
       <div style="font-size:10px;color:var(--muted);margin-top:1px;">${pct}%</div>
       <div class="sf-node-name">${s.name}</div>
     </div>`;
-    if (i < RENEW_PIPELINE.length - 1) html += '<div class="sf-arrow">›</div>';
+    if (i < mainFlow.length - 1) html += '<div class="sf-arrow">›</div>';
   });
+  html += '</div>';
+
+  // Reject — same row, separated by vertical dashed line
+  if (rejectItem) {
+    const pct = total > 0 ? Math.round((rejectItem.count/total)*100) : 0;
+    html += `<div style="display:flex;align-items:center;gap:0;padding-bottom:14px;flex-shrink:0;">
+      <div style="height:72px;border-left:1.5px dashed var(--border-subtle);margin:0 18px;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+        <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px;white-space:nowrap;">ปฏิเสธ</span>
+        <div class="sf-node sf-stuck" style="border-style:dashed;">
+          <div class="sf-node-abbr">${rejectItem.abbr}</div>
+          <div class="sf-node-count">${rejectItem.count}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px;">${pct}%</div>
+          <div class="sf-node-name">${rejectItem.name}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
   html += '</div>';
 
   // Summary table
