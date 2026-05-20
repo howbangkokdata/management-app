@@ -1,27 +1,13 @@
 (function () {
   'use strict';
 
-  const SESSION_KEY = 'how_supabase_runtime_key';
-  const LOCAL_KEY = 'how_supabase_runtime_key_persisted';
+  // Supabase anon key — public by design (safe to commit)
+  // Security layer: Firebase Auth restricts access to @howbangkok.com accounts
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyZ2Rud2h4d3lrZHdyd2tvanliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDU1MjMsImV4cCI6MjA5NDU4MTUyM30.PFUrLQF0_0DLV_rnjeesV6LfKIq_0HFvBnbNqyM1gso';
 
-  function get() {
-    return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_KEY) || '';
-  }
-
-  function set(value, persist) {
-    const key = (value || '').trim();
-    sessionStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(LOCAL_KEY);
-    if (!key) return;
-    if (persist) localStorage.setItem(LOCAL_KEY, key);
-    else sessionStorage.setItem(SESSION_KEY, key);
-  }
-
-  function clear() {
-    sessionStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(LOCAL_KEY);
-  }
-
-  window.HowSupabaseKey = { get, set, clear };
+  window.HowSupabaseKey = {
+    get: () => ANON_KEY,
+    set: () => {},
+    clear: () => {},
+  };
 })();
-
